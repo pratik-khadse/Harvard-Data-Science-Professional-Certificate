@@ -1,0 +1,2799 @@
+---
+title: "Online Rental Listing Price Prediction"
+author: "Pratik Khadse"
+date: "27/12/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+
+
+\setcounter{tocdepth}{5}
+\setcounter{secnumdepth}{5}
+
+\newcommand{\subsubsubsection}[1]{\paragraph{#1}\mbox{}\par}
+
+\tableofcontents
+
+\newpage
+\section{Overview}
+
+Technology driven world invites new business ideas to be launched quickly. In that line, on-demand business like ride-hailing and rental services are heading the market. Some prominent names include tech giants like Uber and Airbnb which made instant services possible just by simple taps. Online Property rental is a fundamental business these days. Especially with the rising demands for settlement and accommodation more and more demands for economical means of living have to be thought of. Renting makes it much economical for people of the middle class considering those you move from their traditional houses in villages to cities in order to start their jobs.
+
+Airbnb is a leading platform in the field of online property rental, enabling hosts to accommodate guests with short-term lodging and tourism-related activities. Guests search for lodging using relevant filters such as location, furniture, cooking facilities etc, which in-turn determines the pricing. Pricing is therefore probably the most important for hosts and customers. The average rent in US is said to increase per year, give or take, somewhere between 3% and 5%. For a monthly rent payment of \$1,500, for example, we're talking between \$45 and \$75 more per month. Ensuring fair price can directly affect booking activities, and also matters to the well-being of the e-commerce environment. Thus, studying the reasonable forecast and fair suggestion of prices of Airbnb listings can have huge real-life values and may generalize to other applications as well.
+
+In this project, we develop a model to predict the price of Airbnb listings in major U.S. cities, using minimum number of features. Ensemble machine learning models and their constituent algorithms are compared for this purpose, utilizing an appropriate loss function and checking the variance explained by these models.
+
+The downloaded dataset is inspected initially, understanding different factors involved. This is followed by data cleaning to produce a more comprehensible perspective of the same. This clean dataset is further explored to evaluate relationship between different factors involved and their impact on the target variable to aid data modeling stage. Training and validation sets, along with intermediate test set for tuning is generated prior to model building, the suitable split ratio being decided by findings in exploration stages. Using an appropriate loss functions and goodness of fit measure, the final model is validated.
+
+This report takes you through the different stages of project development, explaining various steps of model building and logical reasoning behind the same.
+
+
+\subsection{About Dataset}
+Kaggle, a subsidiary of Google LLC, is an online community of data scientists and machine learning practitioners. It allows users to find and publish data sets, explore and build models in a web-based data-science environment, work with other data scientists and machine learning engineers, and enter competitions to solve data science challenges.
+
+Our dataset downloaded from Kaggle consists of Airbnb listings in major U.S. cities. A total of 28 columns are present including id, log_price (target variable), etc. The original link provides 2 datasets, one for model fitting and one for deployment (having no target variable). We work with the former in this project, training our models to accurately predict the target variable and comparing it to the original values available. Following is the URL to download applicable dataset: https://www.kaggle.com/rudymizrahi/airbnb-listings-in-major-us-cities-deloitte-ml/download
+
+\newpage
+\section{Methodology}
+\subsection{Literature Review: Correlation and Association Tests, and Feature Importance}
+Identifying the right features is important to make business sense when using machine learning models. Correlation coefficients like Spearman's Correlation Coefficient alongside significance tests like ANOVA aid in figuring out the relationship between different variables present in our dataset. Used alongside feature importance, which provides a measure of utility a variable adds in explaining variation in target variable for a model, these metrics help in avoiding any redundant usage of variables and improves computation speed and efficiency. We describe these techniques in detail in this section.
+
+\subsubsection{Correlation}
+Correlation is a bivariate analysis that measures the strength of association between two variables and the direction of their relationship.  In terms of the strength of relationship, the value of the correlation coefficient varies between +1 and -1.  A value of ± 1 indicates a perfect degree of association between the two variables.  As the correlation coefficient value goes towards 0, the relationship between the two variables will be weaker.  The direction of the relationship is indicated by the sign of the coefficient; a + sign indicates a positive relationship and a – sign indicates a negative relationship. Here we describe the following types of correlation: Pearson correlation, Spearman's rank correlation and Point-Biserial correlation.
+
+\subsubsubsection{Pearson Correlation}
+Pearson Correlation, also called Pearson product-moment correlation, is the most widely used correlation statistic to measure the degree of the relationship between variables. An important assumption of Pearson correlation is that the distribution of the variables concerned should be normal, i.e., a bell-shaped curve. Other assumptions include linearity between variables. For example, in the stock market, if we want to measure how two stocks are related to each other, Pearson correlation is used to measure the degree of relationship between the two. The point-biserial correlation is conducted with the Pearson correlation formula except that one of the variables is dichotomous. The following formula is used to calculate the Pearson's r (coefficient of correlation):
+
+$$
+r_{xy} = \frac{n\sum{x_iy_i - \sum{x_i}\sum{y_i}}}{\sqrt{n\sum{x_i^2} - (\sum{x_i})^2}\sqrt{n\sum{y_i^2} - (\sum{y_i})^2}}
+$$
+where,
+
+$r_{xy}$ = Pearson correlation coefficient between $x$ and $y$
+
+$n$ = number of observations
+
+$x_i$ = value of $x$ (for $i^{th}$ observation)
+
+$y_i$ = value of $y$ (for $i^{th}$ observation)
+
+\subsubsubsection{Spearman's Rank Correlation}
+
+Spearman's rank correlation is a non-parametric test that is used to measure the degree of association between two variables. The Spearman's rank correlation test does not carry any assumptions about the distribution of the data and is the appropriate correlation analysis when the variables are measured on a scale that is at least ordinal. The following formula is used to calculate the Spearman's rank correlation coefficient:
+
+$$
+\rho = 1 - \frac{6\sum{d_i^2}}{n(n^2 - 1)}
+$$
+where,
+
+$\rho$ = Spearman's rank correlation coefficient
+
+$d_i$ = the difference between the ranks of corresponding variables
+
+$n$ = number of observations
+
+\subsubsubsection{Point-Biserial Correlation}
+
+A point-biserial correlation is used to measure the strength and direction of the association that exists between a continuous variable and a dichotomous variable. It is a special case of the Pearson product-moment correlation, which is applied when you have two continuous variables, whereas in this case one of the variables is measured on a dichotomous scale. For example, you could use a point-biserial correlation to determine whether there is an association between salaries, measured in US dollars, and gender (i.e., your continuous variable would be "salary" and your dichotomous variable would be "gender", which has two categories: "males" and "females"). Point-biserial test follows the assumption that the continuous variable must be approximately normally distributed. The formula for point-biserial coefficient is given as:
+
+$$
+r_{pb} = \frac{M_1 - M_0}{s_n}\sqrt{pq}
+$$
+where,
+
+$M_1$ = mean (for the entire test) of the group that received the positive binary variable (i.e. the “1”).
+
+$M_0$ = mean (for the entire test) of the group that received the negative binary variable (i.e. the “0”).
+
+$S_n$ = standard deviation for the entire test.
+
+$p$ = Proportion of cases in the “0” group.
+
+$q$ = Proportion of cases in the “1” group.
+
+\subsubsection{Nominal Association: Cramer's V}
+
+Association refers to coefficients which gauge the strength of a relationship. These coefficients in general are designed for use with nominal data. Cramer's V is the most popular of the chi-square-based measures of nominal association because it gives good norming from 0 to 1. V equals the square root of chi-square divided by sample size, n, times m, which is the smaller of (rows - 1) or (columns - 1). The following formula is used:
+
+$$
+V = \sqrt{\frac{\chi^2}{\chi_{max}^2}}
+$$
+
+with $\chi_{max}^2 = n*m$ and $m = min(N,P) - 1$
+
+where $N$ is the number of rows and P is number of columns
+
+Values < 0.3 mean low association, between 0.3 to 0.5 mean moderate and greater than 0.5 means high association.
+
+\subsubsection{Analysis of Variance}
+The one-way analysis of variance (ANOVA) is used to determine whether there are any statistically significant differences between the means of three or more independent (unrelated) groups. The one-way ANOVA compares the means between the groups you are interested in and determines whether any of those means are statistically significantly different from each other. Specifically, it tests the null hypothesis:
+
+$$
+H_0 : \mu_0 = \mu_1 = \mu_2 = ... = \mu_k
+$$
+
+where $\mu$ = group mean and $k$ = number of groups. If, however, the one-way ANOVA returns a statistically significant result, we accept the alternative hypothesis ($H_A$), which is that there are at least two group means that are statistically significantly different from each other. Here the assumption is that the dependent variable follows normal distribution. ANOVA is useful particularly to compare continuous variable with nominal categorical variables (with more than 2 categories).
+
+\newpage
+\subsection{Literature Review: Ensemble methods and Machine Learning Models for Regression}
+Data is foundational to business intelligence, and training data size is one of the main determinants of your model’s predictive power. So more data leads to more predictive power. For our project which focuses specifically on U.S. cities, the data we have is limited. Ensemble techniques are therefore essential to improve the productivity of our predictive models. Algorithms like Random Forest which employ techniques bagging and bootstrapping provide better results than simple machine learning algorithms. In this section, we describe the machine learning models used in our project, including the techniques made use of by ensemble methods.
+
+\subsubsection{Ensemble methods}
+
+Ensemble methods is a machine learning technique that combines several base models in order to produce one optimal predictive model. To better understand this definition lets take a step back into ultimate goal of machine learning and model building. When you want to purchase a new car, will you walk up to the first car shop and purchase one based on the advice of the dealer? It’s highly unlikely. You would likely browser a few web portals where people have posted their reviews and compare different car models, checking for their features and prices. You will also probably ask your friends and colleagues for their opinion. In short, you wouldn’t directly reach a conclusion, but will instead make a decision considering the opinions of other people as well. Ensemble models in machine learning operate on a similar idea. They combine the decisions from multiple models to improve the overall performance which can be achieved in various ways. Ensemble techniques include simple methods like max voting, averaging, and advanced techniques like bagging.
+
+We will now review some of the simple and advanced ensemble techniques, alongside constituent machine learning algorithms.
+
+\subsubsubsection{Simple Ensemble Methods}  
+
+1) **Max voting:** The max voting method is generally used for classification problems. In this technique, multiple models are used to make predictions for each data point. The predictions by each model are considered as a ‘vote’. The predictions which we get from the majority of the models are used as the final prediction.
+
+2) **Averaging:** Similar to the max voting technique, multiple predictions are made for each data point in averaging. In this method, we take an average of predictions from all the models and use it to make the final prediction. Averaging can be used for making predictions in regression problems or while calculating probabilities for classification problems.
+
+3) **Weighted Averaging:** This is an extension of the averaging method. All models are assigned different weights defining the importance of each model for prediction. For instance, if two of your colleagues are critics, while others have no prior experience in this field, then the answers by these two friends are given more importance as compared to the other people.
+
+Being a regression problem, we use the averaging method for predicted price listings. Decision Tree and Linear Regression models are utilized as components for our ensemble model.
+
+\subsubsubsection{Advanced Ensemble Methods: Bagging}  
+
+The idea behind bagging is combining the results of multiple models (for instance, all decision trees) to get a generalized result. Here’s a question: If you create all the models on the same set of data and combine it, will it be useful? There is a high chance that these models will give the same result since they are getting the same input. So how can we solve this problem? One of the techniques is bootstrapping.
+
+Bootstrapping is a sampling technique in which we create subsets of observations from the original dataset, with replacement. The size of the subsets is the same as the size of the original set.
+
+Bagging (or Bootstrap Aggregating) technique uses these subsets (bags) to get a fair idea of the distribution (complete set). The size of subsets created for bagging may be less than the original set.
+
+The Random Forest model uses these this method to generate accurate results.
+
+\subsubsection{Machine Learning Models for Regression}
+
+Regression analysis is a set of statistical methods used for the estimation of relationships between a dependent variable and one or more independent variables. It can be utilized to assess the strength of the relationship between variables and for modeling the future relationship between them. Regression analysis includes several variations, such as linear, multiple linear, and non-linear. The most common models are simple linear and multiple linear. Non-linear regression analysis is commonly used for more complicated data sets in which the dependent and independent variables show a nonlinear relationship. We now explore the models used for regression in our project namely Linear Regression (multiple), Decision Tree and Random Forest.
+
+\subsubsubsection{Linear Regression}
+
+Linear regression attempts to model the relationship between two variables by fitting a linear equation to observed data. One variable is considered to be an explanatory variable, and the other is considered to be a dependent variable. For example, a modeler might want to relate the weights of individuals to their heights using a linear regression model. The formula for a linear model is straight line which can be generalized as:
+
+$$
+Y = \beta_0 + \beta_1X_1 + \beta_2X_2 +...+\beta_nX_n
+$$
+where $Y$ is the dependent (target) variable, $\beta_0$ is the intercept of the line and $\beta_1$ to $\beta_n$ are the coefficients for predictor variables $X_1$ to $X_n$.
+
+Before attempting to fit a linear model to observed data, a modeler should first determine whether or not there is a relationship between the variables of interest. This does not necessarily imply that one variable causes the other (for example, higher SAT scores do not cause higher college grades), but that there is some significant association between the two variables. A scatter plot can be a helpful tool in determining the strength of the relationship between two variables. If there appears to be no association between the proposed explanatory and dependent variables (i.e., the scatter plot does not indicate any increasing or decreasing trends), then fitting a linear regression model to the data probably will not provide a useful model. 
+
+**Least Squares Regression:** The most common method for fitting a regression line is the method of least-squares. This method calculates the best-fitting line for the observed data by minimizing the sum of the squares of the vertical deviations from each data point to the line (if a point lies on the fitted line exactly, then its vertical deviation is 0). Because the deviations are first squared, then summed, there are no cancellations between positive and negative values.
+
+**p-value and variable significance:** The linear regression summary provides p-values for different predictor variables. The p-values are very important because, we can consider a linear model to be statistically significant only when both these p-values are less than the pre-determined statistical significance level of 0.05. This can be visually interpreted by the significance stars at the end of the row against each X-variable. The null hypothesis ($H_0$) is that the beta coefficients associated with the variables is equal to zero. When found the statistically significant we reject the null hypothesis and the alternate hypothesis (that the coefficients are not equal to zero) is accepted, justifying a relationship between the independent variable in question and the dependent variable.
+
+\subsubsubsection{Decision Tree}
+
+The decision tree method is a powerful and popular predictive machine learning technique that is used for both classification and regression. So, it is also known as Classification and Regression Trees (CART). Note that the R implementation of the CART algorithm is called RPART (Recursive Partitioning And Regression Trees) available in a package of the same name. The algorithm of decision tree models works by repeatedly partitioning the data into multiple sub-spaces, so that the outcomes in each final sub-space is as homogeneous as possible. This approach is technically called recursive partitioning. The resulting tree is composed of decision nodes, branches and leaf nodes. The tree is placed from upside to down, so the root is at the top and leaves indicating the outcome is put at the bottom. Each decision node corresponds to a single input predictor variable and a split cut-off on that variable. The leaf nodes of the tree are the outcome variable which is used to make predictions. The tree grows from the top (root), at each node the algorithm decides the best split cut-off that results to the greatest purity (or homogeneity) in each sub partition.
+
+Technically, for regression modeling, the split cut-off is defined so that the residual sum of squared error (RSS) is minimized across the training samples that fall within the sub partition. The formula for RSS is given as:
+
+
+$$
+RSS = sum((Observed - Predicted)^2)
+$$
+
+The tree will stop growing by the following three criteria:
+
+1. All leaf nodes are pure with a single class;
+2. A pre-specified minimum number of training observations that cannot be assigned to each leaf nodes with any splitting methods;
+3. The number of observations in the leaf node reaches the pre-specified minimum one.
+
+**Parameters for Tuning:** A fully grown tree will overfit the training data and the resulting model might not be performant for predicting the outcome of new test data. We often tune the parameters for optimum fit and better loss function (RMSE). Below is a description of the parameters we use for tuning our model:
+
+1) **cp (Complexity Parameter):** The complexity parameter (*cp*) is used to control the size of the decision tree and to select the optimal tree size. If the cost of adding another variable to the decision tree from the current node is above the value of *cp*, then tree building does not continue. We could also say that tree construction does not continue unless it would decrease the overall lack of fit by a factor of *cp*. For regression models the scaled *cp* has a very direct interpretation: if any split does not increase the overall R-squared of the model by at least *cp* then that split is decreed to be, a priori, not worth pursuing. The program does not split said branch any further, and saves considerable computational effort.
+
+2) **minsplit:** the minimum number of observations that must exist in a node in order for a split to be attempted.
+
+3) **minbucket:** the minimum number of observations in any terminal (leaf) node. If only one of *minbucket* or *minsplit* is specified, the code either sets *minsplit* to $minbucket*3$ or minbucket to $minsplit/3$, as appropriate.
+
+Parameter tuning is performed using the rpart.control() function of the rpart library, post which feature importance is used to remove redundant features.
+
+**Feature Importance:** In order to remove any excess variables that don't add much to our model performance, feature importance is a vital technique, commonly employed using the varImp() function. Model based feature importance is calculated by rpart library. Here, the reduction in the loss function (e.g. mean squared error) attributed to each variable at each split is tabulated and the sum is returned. Measuring on a scale of 0 to 100, we can use this method to filter out unimportant features for better proficiency.
+
+Decision trees are thus easier to interpret and understand, but in general are known to provide lesser accuracy than the ensemble technique using them namely Random Forest.
+
+
+\subsubsubsection{Random Forest}
+
+Random Forest algorithm works by creating multiple decision trees and then combining the output generated by each of the decision trees. It works on the same principle as Decision Tress. However, it does not select all the data points and variables in each of the trees. It randomly samples data points and variables in each of the tree that it creates and then combines the output at the end. It removes the bias that a decision tree model might introduce in the system. Also, it improves the predictive power significantly. We now dive into the fundamental aspects of principle behind Random Forest
+
+**Bagging and Bootstrapping:** As discussed previously, a bootstrap sample is a random sample of the data taken with replacement This means that, after a data point is selected for inclusion in the subset, it’s still available for further selection. A bootstrap ample is the same size as the original data set from which it was constructed. Since samples are drawn with replacement, each bootstrap sample is likely to contain duplicate values. In fact, on average, $\approx 63.21\%$ of the original sample ends up in any particular bootstrap sample. The original observations not contained in a particular bootstrap sample are considered out-of-bag (OOB). When bootstrapping, a model can be built on the selected samples and validated on the OOB samples.
+
+Bootstrap aggregating, also called *bagging*, is one of the first ensemble algorithms machine learning practitioners learn and is designed to improve the stability and accuracy of regression and classification algorithms. By model averaging, bagging helps to reduce variance and minimize overfitting. Although it is usually applied to decision tree methods, it can be used with any type of method.  Bagging is a fairly straight forward algorithm in which $b$ bootstrap copies of the original training data are created, the regression or classification algorithm (commonly referred to as the *base learner*) is applied to each bootstrap sample and, in the regression context, new predictions are made by averaging the predictions together from the individual base learners. When dealing with a classification problem, the base learner predictions are combined using plurality vote or by averaging the estimated class probabilities together. This is represented in the following equation:
+  
+
+$$
+\hat{f}_{bag} = \hat{f}_1(X) + \hat{f}_2(X) +....+ \hat{f}_b(X)
+$$
+
+where $X$ is the record for which we want to generate a prediction, $\hat{f}_{bag}$ is the bagged prediction, and $\hat{f}_1(X), \hat{f}_2(X),....\hat{f}_b(X)$ are the predictions from the individual base learners.     
+
+Bagging trees introduces a random component into the tree building process by building many trees on bootstrapped copies of the training data. Bagging then aggregates the predictions across all the trees; this aggregation reduces the variance of the overall procedure and results in improved predictive performance.
+
+**Parameters for tuning:** Although Random Forests perform well out-of-the-box, there are several tunable hyperparameters that we should consider when training a model. The main hyperparameters we consider for our project are:
+
+1. Number of trees in the forest: *ntree*, and
+2. The number of features to consider at any given split: *mtry*
+
+1) **ntree** The first consideration is the number of trees within your Random Forest. Although not technically a hyperparameter, the number of trees needs to be sufficiently large to stabilize the error rate.  More trees provide more robust and stable error estimates and variable importance measures; however, the impact on computation time increases linearly with the number of trees.
+
+2) **mtry:** The hyperparameter that controls the split-variable randomization feature of Random Forests is often referred to as *mtry* and it helps to balance low tree correlation with reasonable predictive strength. With regression problems the default value is often $mtry = p/3$ and for classification $mtry = \sqrt{p}$. However, when there are fewer relevant predictors (e.g., noisy data) a higher value of *mtry* tends to perform better because it makes it more likely to select those features with the strongest signal. When there are many relevant predictors, a lower *mtry* might perform better.
+
+The feature importance can be calculated after the parameters are tuned (empirically found to change with tuning these parameters).
+
+
+**Feature Importance:** As discussed in Decision Tree section, the varImp() function is a commonly used method to get feature importance of models, provided means to better train our model. Ranging from 0 to 100, it can be used to lower the number of features used.
+
+The Random Forest thus reduce variance part of error, providing less overfitted model and better practical accuracy. Although with a higher computation time, Random Forest provides an important means to work with non-linear data.
+
+
+\subsubsubsection{Evaluating Models} \label{metrics}
+
+**Root Mean Square Error:** An appropriate loss function is important to evaluate regression models. In our project, we use the Root Mean Square Error (RMSE) as our loss function. Root Mean Square Error (RMSE) is the standard deviation of the residuals (prediction errors). Residuals are a measure of how far from the regression line data points are; RMSE is a measure of how spread out these residuals are. In other words, it tells you how concentrated the data is around the line of best fit. Root mean square error is commonly used in climatology, forecasting, and regression analysis to verify experimental results. The term is always between 0 and 1. For example, if all the points lie exactly on a line with positive slope, then the RMSE will be 0. This means there is no spread in the values of $y$ around the regression line (which you already knew since they all lie on a line).The formula for RMSE is given as:
+
+$$
+RMSE = \sqrt{\sum_{i = 1}^n \frac{(\hat{y}_i - y_i)^2}{n}}
+$$
+
+Where, 
+
+$\hat{y}_i$ = predicted value at $i$
+
+$y_i$ = observed value at $i$
+
+$n$ = number of observations
+
+**R-squared: ** The coefficient of determination, R-squared , is used to analyse how differences in one variable can be explained by a difference in a second variable. For example, when a person gets pregnant has a direct relation to when they give birth. More specifically, R-squared gives you the percentage variation in $y$ explained by x-variables. The range is 0 to 1 (i.e. 0% to 100% of the variation in $y$ can be explained by the x-variables). The coefficient of determination, $R^2$, is similar to the correlation coefficient, $r$. The correlation coefficient formula will tell you how strong of a linear relationship there is between two variables. R-squared is the square of the correlation coefficient, $r$ (hence the term "R-squared"). The formula for R-squared is given as:
+
+$$
+R^2 = 1 - \frac{SS_{res}}{SS_{tot}}
+$$
+
+$SS_{tot}$ is the total sum of squares, given by
+
+$$
+SS_{tot} = \sum_{i=1}^n (y_i - \bar{y})^2
+$$
+
+where,
+
+$y_i$ = observed value at $i$
+
+$\bar{y}$ = mean of observed data
+
+$SS_{res}$ is the sum of squares of residuals, given by
+
+$$
+SS_{res} = (\hat{y}_i - y_i)^2
+$$
+
+where, $\hat{y}_i$ = predicted value at $i$, other notations being similar as earlier.
+
+In the best case, the modeled values exactly match the observed values, which results in $SS_{res} = 0$ and $R^2 = 1$. A baseline model, which always predicts $\bar{y}$ will have $R^2 = 0$. Models that have worse predictions than this baseline will have a negative $R^2$.
+
+The correct R-squared value depends on your study area. Different research questions have different amounts of variability that are inherently unexplainable. Case in point, humans are hard to predict. Any study that attempts to predict human behaviour will tend to have R-squared values less than 50%. However, if you analyse a physical process and have very good measurements, you might expect R-squared values over 90%. There is no one-size fits all best answer for how high R-squared should be.
+
+Having reviewed important concepts, we now proceed through applicable stages for building our predictive model.
+
+\newpage
+\subsection{Importing Libraries and Loading data}
+
+Required libraries are first imported and raw dataset loaded.
+
+
+```{r shortcuts,include = FALSE, echo=FALSE}
+# Ctrl+Shift+Enter to Run chunk
+# Ctrl+Alt+I to Insert chunk
+# Ctrl+Shift+K to Knit
+```
+
+```{r TinyTex, include = FALSE}
+#tinytex::install_tinytex()
+tinytex:::is_tinytex()
+#install.packages("kableExtra")
+```
+
+
+\subsubsection{Libraries}
+```{r, message=FALSE, warning = FALSE}
+# Load libraries
+
+options(digits = 5) #output digits
+options(scipen = 999) # avoid exponential notations
+
+library(tidyverse) #for tables, ggplot, etc
+library(caret) #for ML
+library(rpart) #for decision tree
+library(lubridate) #for dates
+library(naniar) #for missing values
+library(gridExtra) #for plots
+library(plyr) #for rounding digits (round_any)
+library(knitr) #for knitting
+library(kableExtra) #for knitting (kable_styling)
+library(Hmisc) #for correlation (Spearman) matrix
+library(corrplot) #for correlation plots
+library(rcompanion) #for Cramer's V correlation matrix
+
+
+#Or use the following if packages are not installed earlier
+
+# if(!require(tidyverse)) install.packages("tidyverse", 
+#                                          repos = "http://cran.us.r-project.org")
+# if(!require(caret)) install.packages("caret",
+#                                      repos = "http://cran.us.r-project.org")
+# if(!require(rpart)) install.packages("rpart",
+#                                      repos = "http://cran.us.r-project.org")
+# if(!require(lubridate)) install.packages("lubridate",
+#                                          repos = "http://cran.us.r-project.org")
+# if(!require(naniar)) install.packages("naniar",
+#                                          repos = "http://cran.us.r-project.org")
+# if(!require(gridExtra)) install.packages("gridExtra", 
+#                                          repos = "http://cran.us.r-project.org")
+# if(!require(plyr)) install.packages("plyr",
+#                                          repos = "http://cran.us.r-project.org")
+# if(!require(knitr)) install.packages("knitr", 
+#                                          repos = "http://cran.us.r-project.org")
+# if(!require(kableExtra)) install.packages("kableExtra",
+#                                      repos = "http://cran.us.r-project.org")
+# if(!require(Hmisc)) install.packages("Hmisc",
+#                                          repos = "http://cran.us.r-project.org")
+# if(!require(corrplot)) install.packages("corrplot",
+#                                          repos = "http://cran.us.r-project.org")
+# if(!require(rcompanion)) install.packages("rcompanion",
+#                                          repos = "http://cran.us.r-project.org")
+
+
+```
+
+```{r wrap-hook, include= FALSE}
+# Function to prevent output text from flowing out in pdf
+
+hook_output = knit_hooks$get('output')
+knit_hooks$set(output = function(x, options) {
+  # this hook is used only when the linewidth option is not NULL
+  if (!is.null(n <- options$linewidth)) {
+    x = knitr:::split_lines(x)
+    # any lines wider than n should be wrapped
+    if (any(nchar(x) > n)) x = strwrap(x, width = n)
+    x = paste(x, collapse = '\n')
+  }
+  hook_output(x, options)
+})
+```
+
+\subsubsection{Load Dataset}
+```{r, message = FALSE}
+# Load Dataset
+
+df_modfit <- read_csv("train.csv")
+
+## Assumed that the downloaded file is saved in your working directory
+## Use getwd() to check the same
+```
+
+\subsection{Sanity Checks}
+
+Here we do a basic sanity check on the dataset, checking number of rows, columns and structure of our data. This is a useful part of initial data understanding.
+
+```{r, results="asis"}
+
+# View dataset
+
+## strings are truncated for better view
+
+for(k in 1:ceiling(dim(df_modfit)[2]/5)){
+  i = 5*k
+  if(i < dim(df_modfit)[2]){
+      head(df_modfit %>%
+             mutate_if(., is.character, str_trunc, width = 20))[,(i-4):i] %>%
+      knitr::kable(format = "latex", booktabs = T) %>%
+      kableExtra::kable_styling(latex_options = "scale_down") %>%
+      column_spec(column = 1:5, width = "10em") %>%
+      print(.)
+  }
+  else{
+    head(df_modfit %>%
+           mutate_if(., 
+                     is.character, 
+                     str_trunc,
+                     width = 20))[,(i-4):dim(df_modfit)[2]] %>%
+      knitr::kable(format = "latex", booktabs = T) %>%
+      kableExtra::kable_styling(latex_options = "scale_down") %>%
+      column_spec(column =  1:(dim(df_modfit)[2] - (i-4) + 1),
+                  width = "10em") %>%
+      print(.)
+  }
+}
+
+
+
+```
+
+
+\subsubsection{Dataset Structure}
+```{r, linewidth = 60}
+# Basic Summary
+
+## data types and variables
+df_modfit %>%
+  mutate_if(., is.character, str_trunc, width = 20) %>%
+  str(.)
+
+```
+
+\subsubsection{Descriptive Statistics}
+
+We also take a look at summary statistics to gain preliminary insight.
+
+```{r}
+# Summary stats
+
+summary(df_modfit) %>%
+  knitr::kable(format = "latex", booktabs = T) %>%
+  kableExtra::kable_styling(latex_options = "scale_down")
+
+```
+
+As seen from above output, multiple variable types in the raw dataset are visible from the first five rows and structure. Apart from the identity variable ("id"), we can spot character categorical variables ("property_type", "room_type"), numerical categorical variables (eg: "accommodates", "bathrooms"), logical variables (eg: "cleaning_fee") and date type variables (eg: "host_since"). Columns characterizing multiple factors for a particular listing can also be seen in "amenities" column. These factors can be separated later for better analysis and model building.
+
+The structure and above summary also evinces need for data cleaning with respect to data types and missing values. Eg: "zipcode" entries are wrongly read as a characters, while missing values can be seen in columns "host_response_rate", "review_scores_rating" and some other columns. We now proceed to more in depth data understanding and cleaning phases.
+
+\newpage
+\subsection{Data Understanding and Cleaning}
+Having viewed the preliminary data structure, the information contained in each column is summarized as follows:
+
+1. id: record identifier
+2. log_price: target variable, log(price)
+3. property_type: information regarding property category, eg: Apartment, House, etc
+4. room_type: information regarding rooms in the property, eg: Private room, Entire Home/apt, etc
+5. amenities: information regarding facilities available, eg: Cooking, Washer_Dryer, etc. Values are separated by comma.
+6. accommodates: number of people the property can generally accommodate (numeric values)
+7. bathrooms: number of bathrooms available (numeric values)
+8. bed_type: information regarding bed category, eg: Pull-out sofa, real bed, etc
+9. cancellation_policy: contains information regarding flexibility of cancellation policy pertaining booking.
+10. cleaning_fee: additional charge applicable or not as TRUE/FALSE values
+11. city: information regarding the city which the property is located in.
+12. description: a brief description of the property
+13. first_review: the first review date
+14. host_has_profile pic: profile pic availability as TRUE/FALSE values
+15. host_identity_verified: identity verification completion of host as TRUE/FALSE values
+16. host_response_rate: percentage values for host response
+17. host_since: date showing first instance of property being hosted
+18. instant_bookable: instant booking availability as TRUE/FALSE values
+19. last_review: last review date
+20. latitude: geographical coordinate of property location
+21. longitude: geographical coordinate of property location
+22. name: Property name
+23. neighbourhood: information regarding the neighbourhood which the property is located in.
+24. number_of_reviews: review count (numeric values)
+25. review_scores_rating: rating indicating quality assessment (scale 1 to 100)
+26. thumnail_url: link for property thumbnail
+27. zipcode: zipcodes for properties
+28. bedrooms: number of bedrooms available (numeric values)
+29. beds: number of beds available (numeric values)
+
+
+We approach the data cleaning phase in 4 stages:
+
+1. Remove Unneeded variables
+2. Visualize missing values
+3. Generate Derived Variables
+4. Data type corrections
+5. Treat Missing Values
+
+\subsubsection{Remove Unneeded Variables}
+Variables which don't aid our analysis are first removed. These are found to be "name", "description" and "thumbnail_url" in our dataset, not containing much information that will affect our model.
+
+```{r}
+# Remove unneeded columns
+
+df_modfit <- df_modfit %>%
+  select(-c(name, description,thumbnail_url))
+```
+
+\subsubsection{Visualize Missing Values}
+Missing values are tabulated to aid analysis in further stages.
+
+```{r}
+# Check null value counts
+
+## Initialize dataframe
+missing_vals <- data.frame()
+
+## null value count
+for (col in colnames(df_modfit)){
+  missing_vals <- missing_vals %>%
+    rbind(data.frame(column = col, null_value = sum(is.na(df_modfit[, col]))))
+}
+
+## Updata dataframe
+missing_vals %>%
+  arrange(desc(null_value)) %>%
+  knitr::kable(format = "latex", booktabs = T)
+```
+
+We use the naniar library to visualize the missing values. It tells us the proportion of missing values in the overall dataset as well as the percentage of data missing in individual columns.
+
+```{r, fig.align= "left", out.width= "80%", out.height= "80%"}
+# Visualize
+
+png(filename =  "missing_values.png")
+naniar::vis_miss(df_modfit, warn_large_data = FALSE, sort_miss = TRUE)+
+                   theme(axis.text.x = element_text(angle = 90, 
+                                     vjust = 0.5, 
+                                     hjust = 1))
+invisible(dev.off())
+## save file and use knitr since it's a raster image/plot
+knitr::include_graphics("missing_values.png")  
+```
+
+As seen from the above the table and visualization, missing values and the applicable records match for "first_review" and "last_review" match, lending justification for an association between the two. This observation forms one of the premises for deriving new variables from the same.
+
+\subsubsection{Generate Derived Variables}
+
+It is generally difficult to deal with some data types. Deriving variables from such features helps for easier understanding and model building. This is performed for our dataset columns, replacing earlier ones as follows.
+
+**Date type columns**
+
+Here, we first create a list of columns having date data type.
+
+```{r}
+# Derive variables from date type columns
+
+## Find date type columns
+date_list <- df_modfit %>%
+  select_if(., is.Date) %>%
+  colnames()
+
+date_list
+```
+
+The columns "first_review" and "last_review" are used to create a new variable namely "review_time_diff", containing the time difference in weeks between last review and first review the property received.
+
+Another variable namely "hosting_since" is derived from "host_since" containing the time difference between current date and variable dates in weeks. 
+
+
+
+```{r, message = FALSE, }
+## Create variable review_time_diff and update host_since
+df_modfit <- df_modfit %>%
+  mutate(review_time_diff = as.double(difftime(last_review, first_review, units = "weeks")),
+         hosting_since = as.double(difftime(date(now()), host_since, units = "weeks")))
+
+## Remove unneeded columns
+df_modfit <- df_modfit %>%
+  select(-all_of(date_list))
+
+```
+
+**Amenities**
+
+Amenities columns contains multiple facilities available in a property. These are split into individual columns, denoting availability by 1 or 0 (similar to one-hot encoding), for better perception and easier computing
+
+We first create "amenities_list" inclusive of facilities present in our dataset.
+
+```{r, message = FALSE, warning = FALSE}
+# Derive Variables from Amenities
+
+## split amenities in the dataset
+x <- df_modfit$amenities %>%
+  str_replace_all(., pattern = "\\{|\\}|\"|\"", replacement = "") %>%
+  str_split(., pattern = ",")
+
+df_modfit <- df_modfit %>%
+  mutate(amenities = str_replace_all(amenities, pattern = "\\{|\\}|\"|\"",
+                                     replacement = "") %>%
+           str_split(., pattern = ","))
+
+## Create amenities list, remove unneeded string symbols, eg: (s), -, etc
+amenities_list <- Reduce(union, x) %>%
+  str_trim() %>%
+  str_replace_all(., pattern = "\\s*/\\s*|\\s|-|\\.", replacement = "_") %>%
+  str_replace_all(., pattern = "\\(s\\)|\\:|’|\'", replacement = "")
+
+df_modfit <- df_modfit %>%
+  mutate(amenities =   str_trim(amenities) %>%
+           str_replace_all(., pattern = "\\s*/\\s*|\\s|-|\\.", 
+                           replacement = "_") %>%
+           str_replace_all(., pattern = "\\(s\\)|\\:|’|\'", 
+                           replacement = "")) 
+
+head(amenities_list)
+length(amenities_list)
+```
+
+Some cleaning is performed to remove inconsistencies.
+
+```{r, message = FALSE}
+## Remove zero-length input at index 80
+print(amenities_list[80])
+amenities_list <- amenities_list[-80]
+```
+
+Finally, new columns are added to our dataset. A table containing values counts for amenities ("amenity_count") is also maintained for better understanding.
+
+```{r, message = FALSE}
+## Generate separate columns for amenities
+
+for (element in amenities_list){
+  df_modfit[element] <- ifelse(str_detect(df_modfit$amenities, pattern = element), 1, 0)
+}
+
+## remove unneeded columns
+df_modfit <- df_modfit %>%
+  select(-amenities)
+
+# check value counts of amenities
+
+amenity_count <- data.frame(amenity = character(), 
+                            present = double(), 
+                            percent = double())
+
+for (element in amenities_list){
+  amenity_count <- amenity_count %>%
+    rbind(., data.frame(amenity = element,
+                        present = table(df_modfit[element])["1"],
+                        percent = prop.table(table(df_modfit[element]))["1"]))
+}
+
+rownames(amenity_count) <- 1:length(amenities_list)
+
+## view
+amenity_count %>%
+  knitr::kable(format = "latex", booktabs = T, longtable = T) %>%
+  kableExtra::kable_styling(latex_options = c("repeat_header"))
+
+```
+
+\subsubsection{Data type corrections}
+
+\subsubsubsection{Clean numeric and character columns}
+
+Percentage symbol is removed from "host_response_rate" column, following which, its data type, alongside "zipcode", is converted to numeric.
+```{r, message = FALSE, warning = FALSE}
+# Replace unneeded characters from host_response_rate
+
+## Remove % sign and convert to numeric
+df_modfit <- df_modfit %>%
+  mutate(host_response_rate = 
+           as.numeric(str_replace_all(host_response_rate, 
+                                      pattern = "%", 
+                                      replacement = "")))
+
+# Remove uneeded characters from zipcode
+
+df_modfit <- df_modfit %>%
+  mutate(zipcode = 
+           as.character(as.numeric(zipcode)))
+  
+```
+
+\subsubsubsection{Convert logical data type}
+
+Logical data type columns are converted to numeric, accounting for TRUE and FALSE with 1 and 0 respectively.
+
+```{r}
+# Convert Logical to Numeric
+
+## Find columns with "logical" data type
+logical_list <- df_modfit %>%
+  select_if(., is.logical) %>%
+  colnames(.)
+
+## Convert columns to numeric
+df_modfit[, logical_list] <- sapply(df_modfit[, logical_list], as.numeric)
+```
+
+
+
+```{r, include = FALSE}
+## OR use dynamic variables
+# 
+# for (element in logical_list){
+# df_modfit <- df_modfit %>%
+#   mutate(!!element := as.numeric(!!as.name(element)))
+# }
+```
+
+
+\subsubsection{Treat Missing Values}
+
+In order to treat missing values, we first update the missing values table created earlier since new variables are derived.
+
+```{r}
+
+
+## Update missing_vals tables (since we derived a few)
+missing_vals <- data.frame()
+
+for (col in colnames(df_modfit)){
+  missing_vals <- missing_vals %>%
+    rbind(data.frame(column = col, null_value = sum(is.na(df_modfit[, col]))))
+}
+
+## Get list of columns with missing values
+## we use the table created earlier
+missing_list <- missing_vals %>%
+  filter(null_value != 0) %>%
+  arrange(desc(null_value)) %>%
+  pull(column)
+
+missing_list
+```
+
+To treat missing values, we can either delete the NAs or replace them in the dataset. Since we are operating on a smaller dataset, we refrain from the former and thus proceed to replace null values. The following ways are used to carry out the same:
+
+1. Replacement with mean/median value
+2. Replacement with max/min value
+3. Replacement with a specific value
+
+Particular method chosen and replacement for different variables is now explained.
+
+**Variable Interactions**
+
+Interactions between different variables are first considered before missing value treatment. 
+
+```{r, fig.height= 5, fig.width = 13, fig.align="left"}
+## Null value interactions
+naniar::gg_miss_upset(df_modfit, nsets = naniar::n_var_miss(df_modfit), nintersects = NA)
+```
+
+The above graph shows variables with null values along with count of overlapping null values amongst them. These are generated in decreasing order of count. We see that the first variable in our list, "host_response_rate" has high number of missing values without any overlaps. Contrary to that, there is a high overlap in null values among "review_scores_rating" and "review_time_diff."
+
+We now proceed to treat them in decreasing order of missing value counts.
+
+**Variable: host_response_rate**
+
+```{r, warning = FALSE, message = FALSE, fig.align = "left"}
+# host_response_Rate
+
+## histogram_plot
+df_modfit %>%
+  ggplot(aes(x = host_response_rate)) +
+  geom_histogram(color = "black", fill = "grey", size = 1) +
+  theme_bw() 
+```
+
+The distribution is heavily skewed with 100 being the most common value.
+Keeping the same distribution is thus possible if NAs are replaced with mean or median value. We can proceed with either of the two. Being the generally used method of the two, we select the mean value for replacement for our instance.
+
+```{r}
+# Replace NAs with mean value
+
+df_modfit$host_response_rate[is.na(df_modfit$host_response_rate)] <-
+  round(mean(df_modfit$host_response_rate, na.rm = TRUE))
+
+any(is.na(df_modfit$host_response_rate))
+```
+```{r, warning = FALSE, message = FALSE, fig.align = "left"}
+# Checking New distribution
+
+df_modfit %>%
+  ggplot(aes(x = host_response_rate)) +
+  geom_histogram(color = "black", fill = "grey", size = 1) +
+  theme_bw() 
+```
+
+**Variable: review_scores_rating and review_time_diff**
+
+```{r, message = FALSE, warning=FALSE, fig.align = "left"}
+# review_scores_rating and review_time_diff
+
+## Null value interactions
+naniar::gg_miss_upset(df_modfit, nsets = 2, nintersects = NA)
+```
+
+As seen in the above plot, "review_scores_rating" is absent together with "review_time_diff" the most. It is thus possible to conclude that reviews may not have been received by these records (majority of the records as shown by above graph), rather than data collection error. The two variables are therefore treated together.
+
+```{r, message = FALSE, warning = FALSE, fig.align = "left"}
+## histogram plot
+
+p1 <- df_modfit %>%
+  ggplot(aes(x = review_scores_rating))  +
+  geom_histogram(color = "black", fill = "grey", size = 1) +
+  theme_bw() 
+
+p2 <- df_modfit %>%
+  ggplot(aes(x = review_time_diff))  +
+  geom_histogram(color = "black", fill = "grey", size = 1) +
+  theme_bw() 
+
+gridExtra::grid.arrange(p1, p2)
+```
+
+
+Having plotted the distributions of "review_time_diff" and "review_scores_rating", we replace null values with the least recurring values. These are the minimum value for "review_scores_rating" (0) and maximum value for "review_time_diff" (443.71, ideally we  should replace with infinity, though since it leads to calculation issues, we replace with the maximum value).
+
+```{r}
+# Replace NAs 
+
+## since concluded that reviews are not received
+## with min value for review_scores_rating
+## and max value for review_time_diff
+
+df_modfit$review_scores_rating[is.na(df_modfit$review_scores_rating)] <- 0
+
+df_modfit$review_time_diff[is.na(df_modfit$review_time_diff)] <-
+  max(df_modfit$review_time_diff, na.rm = TRUE)
+
+any(is.na(df_modfit$review_scores_rating))
+any(is.na(df_modfit$review_time_diff))
+```
+
+**Variable: neighbourhood**
+
+```{r, fig.align = "left"}
+# Treat neighbhourhood 
+
+## Check for overlaps
+naniar::gg_miss_upset(df_modfit, nsets = 3)
+
+```
+
+No significant overlaps in missing values are observed for "neighbourhood" variable. Being a categorical variable with character data type, the null values are replaced with a specific value in this instance. We specify "Unknown" as a new category for the same and proceed with replacement.
+
+```{r}
+## Categories in neighbourhood
+
+head(sort(table(df_modfit$neighbourhood), decreasing = TRUE))
+print(c("Unique categories including NA", length(unique(df_modfit$neighbourhood))))
+
+## We replace null values with "Unknown" category
+df_modfit$neighbourhood[is.na(df_modfit$neighbourhood)] <-
+  "Unknown"
+
+any(is.na(df_modfit$neighbourhood))
+```
+
+For variables with similar case, eg: "zipcode", the same missing value treatment is performed.
+
+
+```{r, include=FALSE}
+# Treat zipcode
+
+## Check for overlaps
+naniar::gg_miss_upset(df_modfit, nsets = 3, nintersects = NA)
+
+### No significant overlaps
+```
+
+```{r, include=FALSE}
+## Categories in zipcode
+
+head(sort(table(df_modfit$zipcode), decreasing = TRUE))
+print(c("Unique categories including NA", length(unique(df_modfit$zipcode))))
+
+## We replace null values with "Unknown" category
+df_modfit$zipcode[is.na(df_modfit$zipcode)] <-
+  "Unknown"
+
+any(is.na(df_modfit$zipcode))
+```
+
+**Variable: bathrooms**
+
+```{r, fig.align = "left"}
+# Treat bathrooms
+
+## Check for overlaps
+naniar::gg_miss_upset(df_modfit, nsets = 3, nintersects = NA)
+
+```
+
+With no significant overlaps, the number of missing values for "bathrooms" is small. We still treat the same after checking distribution.
+
+```{r, message=FALSE, warning = FALSE, fig.align = "left"}
+## Check distribution
+
+df_modfit %>%
+  ggplot(aes(x = bathrooms))  +
+  geom_bar(color = "black", fill = "grey",  size = 1) +
+  theme_bw() 
+```
+
+The "bathroom" variable consists of values increasing in 0.5 decimal place. The following description is generally conceived for the same.
+- Full bathrooms: shower, basin, toilet, bath tub
+- Half bathrooms (0.5, 1.5, etc): only toilet and sink, etc
+
+Since it is clear that the number can't be 0 practically speaking (that is the entity represented by the variable is absent), the replacement is completed using mean value and round it to the nearest 0.5 decimal. Variables "beds" and "bedrooms" are also treated in a similar manner.
+
+
+```{r}
+## Replace with mean
+df_modfit$bathrooms[is.na(df_modfit$bathrooms)] <-
+  round_any(mean(df_modfit$bathrooms, na.rm = TRUE), 0.5)
+  
+### like with host_response_Rate, bathrooms are not absent 
+### in the property, only data is unavailable
+### hence replaced with mean
+```
+
+**Variable: hosting_since, host_identity_verified and host_has_profile_pic**
+
+```{r, fig.align = "left"}
+# Treat hosting_since, host_identity_verified and host_has_profile_pic
+
+## Check for overlaps
+naniar::gg_miss_upset(df_modfit, nsets = 4, nintersects = NA)
+
+### We see significant overlaps
+
+```
+
+```{r, message = FALSE, warning=FALSE, fig.align = "left"}
+## Check distributions
+p1 <- df_modfit %>%
+  ggplot(aes(x = hosting_since)) +
+  geom_histogram(color = "black", fill = "grey", size = 1) +
+  theme_bw()
+
+p2 <- df_modfit %>%
+  ggplot(aes(x = host_identity_verified)) +
+  geom_bar(color = "black", fill = "grey", size = 1) +
+  theme_bw()
+
+p3 <- df_modfit %>%
+  ggplot(aes(x = host_has_profile_pic)) +
+  geom_bar(color = "black", fill = "grey", size = 1) +
+  theme_bw()
+
+grid.arrange(p1,p2,p3, nrow = 2)
+
+```
+
+As seen from the above plots, notable overlaps in missing values is seen between the three variables. It can be logically concluded that the missing values are not due to some recording error (as seen in "bathrooms" case), but because the entity represented by the variable is absent. We can therefore justifiably treat missing values as the negative binary outcome for the above categories.
+
+
+```{r, warning = FALSE}
+## Replace values, we use minimum values for all
+## after concluding the entity is absent
+
+df_modfit$hosting_since[is.na(df_modfit$hosting_since)] <- 
+  min(df_modfit$hosting_since, na.rm = TRUE)
+
+df_modfit$host_identity_verified[is.na(df_modfit$host_identity_verified)] <-
+  min(df_modfit$host_identity_verified, na.rm = TRUE)
+
+df_modfit$host_has_profile_pic[is.na(df_modfit$host_has_profile_pic)] <-
+  min(df_modfit$host_has_profile_pic, na.rm = TRUE)
+
+## check NAs to confirm
+any(is.na(df_modfit$hosting_since))
+any(is.na(df_modfit$host_identity_verified))
+any(is.na(df_modfit$host_has_profile_pic))
+```
+
+```{r, include = FALSE}
+# Treat beds and bedrooms
+
+## Check for overlaps
+naniar::gg_miss_upset(df_modfit, nsets = 2, nintersects = NA)
+
+## No significant overlaps. We treat them seperately
+```
+
+```{r, include = FALSE}
+## Check values
+df_modfit %>%
+  ggplot(aes(x = beds)) +
+  geom_bar(color = "black", fill = "grey", size = 1) +
+  theme_bw()
+```
+
+```{r, include = FALSE}
+## Replace using mean value,
+## since data not recorded
+
+df_modfit$beds[is.na(df_modfit$beds)] <-
+  round(mean(df_modfit$beds, na.rm = TRUE))
+
+##check NAs to confirm
+any(is.na(df_modfit$beds))
+```
+
+
+```{r, include = FALSE}
+
+## Check values
+df_modfit %>%
+  ggplot(aes(x = bedrooms)) +
+  geom_bar(color = "black", fill = "grey", size = 1) +
+  theme_bw()
+```
+
+```{r, include = FALSE}
+## Replace using mean value,
+## since data not recorded
+
+df_modfit$bedrooms[is.na(df_modfit$bedrooms)] <-
+  round(mean(df_modfit$bedrooms, na.rm = TRUE))
+
+##check NAs to confirm
+any(is.na(df_modfit$bedrooms))
+
+##check for all dataset
+
+any(is.na(df_modfit))
+```
+
+```{r, include = FALSE}
+# Free up space
+
+rm(missing_vals, p1, p2, p3, x,
+   col, date_list, logical_list, missing_list,
+   element, i, k)
+```
+
+Having completed the Data Cleaning phase, relationships among different column can now be explored to check significance of each variable and its impact on the target variable.
+
+\newpage
+\subsection{Exploratory Data Analysis}
+
+\subsubsection{Value Counts and Data Types}
+
+To proceed with understanding relationship between variables, value counts are observed. A separate table is created preceding the same time to view number of unique values present in variables. 
+
+```{r}
+# Create factor list except amenities and id
+factor_list <- c("property_type", 
+                 "room_type", 
+                 "accommodates", 
+                 "bathrooms",
+                 "bed_type",
+                 "cancellation_policy",
+                 "cleaning_fee",
+                 "city",
+                 "host_has_profile_pic",
+                 "host_identity_verified",
+                 "instant_bookable",
+                 "neighbourhood",
+                 "zipcode",
+                 "bedrooms",
+                 "beds")
+```
+
+
+```{r}
+## unique_count_length
+
+unique_counts <- vector(mode = "numeric")
+
+for(col in factor_list){
+  unique_counts <- append(unique_counts,
+                          length(unique(df_modfit[[col]])))
+}
+
+data.frame(col = factor_list,
+           unique_count_length = unique_counts) %>%
+  knitr::kable(format = "latex", booktabs = "T")
+```
+
+The value counts for these variables are shown below. We exclude "neighbourhood" and "zipcode" for illustration due to large number of categories present. Note that counts for "amenities_list" has already been observed earlier, which is why we exclude it from the "factor_list" used to generate counts.
+
+```{r, results="asis"}
+# Value counts
+
+## table and proportion table
+### exclude neighbourhood, zipcode (for illustration)
+### due to large number of values
+
+for(col in factor_list[!factor_list %in% 
+                       c("neighbourhood", "zipcode")]){
+  data.frame(table(df_modfit[[col]])) %>%
+    dplyr::rename(!!col := Var1)%>%
+    arrange(desc(Freq)) %>%
+    cbind(., data.frame(prop.table(table(df_modfit[[col]]))) %>%
+            arrange(desc(Freq)) %>%
+            dplyr::rename(proportion = Freq) %>%
+            select(proportion)) %>%
+    kable(format = "latex", booktabs = T, longtable = T) %>%
+    kable_styling(latex_options = c("repeat_header")) %>%
+    print(.)
+}
+
+```
+
+From the above observations, the following summary can be obtained:
+
+1. Identity variables: "id" (1 variable)
+2.  Continuous: "log_price", "host_response_rate", "latitude", "longitude",  "number_of_reviews", "review_scores_rating", "review_time_diff", "hosting_since" (8 variables)
+3.  Ordinal Categorical: "accommodates", "bedrooms", "beds", "bathrooms", "cancellation_policy" (5 variables)
+4. Nominal Categorical: All other columns in "factor_list" and "amenities_list": amenities already one-hot encoded. (140 variables)
+
+List of columns are generated for easier access in later steps.
+
+```{r}
+# List for different type of variables
+
+cat3_var <- c("property_type", "room_type", "bed_type", 
+              "city", "neighbourhood","zipcode")
+
+cat2_var <- c("cleaning_fee", "host_has_profile_pic", 
+              "host_identity_verified", "instant_bookable",
+              all_of(amenities_list))
+
+cont_var <- df_modfit %>%
+  select(-c(all_of(factor_list), all_of(amenities_list),
+            "id")) %>%
+  colnames(.)
+
+ordcat_var <- c("accommodates", "bathrooms", "bedrooms", 
+                "beds", "cancellation_policy")
+
+```
+
+
+
+\subsubsection{Correlation and Association}
+We now proceed with finding relations between columns. Note that while these deductions lend significant insight in finding important variables, we deliberately don't alter the dataset in our project at this stage. Changes are made after confirming our findings further with feature importance, for better justification. 
+
+\subsubsubsection{Continuous and ordinal categorical variables}
+
+Spearman's rank correlation is utilized to find correlation between continuous and ordinal categorical variables as distribution for most of these is not normal. Since normal distribution is one of the assumptions for using Pearson correlation, we avoid using the same. Although that is the case, Spearman's correlation allows us to find correlation among continuous and ordinal categorical variables together.
+
+Ordinal categorical variables with originally numerical variables are converted to numeric data type. Others like cancellation policy are label encoded.
+
+
+
+
+```{r}
+# Correlation amongst continuous and ordinal categorical variables
+
+## Correlation matrix
+cont_ordcat_corr <- df_modfit %>%
+  select(c(all_of(cont_var), all_of(ordcat_var))) %>%
+  
+  ##label encode ordcat vars
+  mutate_at(.,
+            vars(all_of(ordcat_var)),
+            function(x){as.numeric(as.factor(x))}) %>%
+  as.matrix(.) %>%
+  rcorr(., type = "spearman")
+
+```
+
+
+```{r, include = FALSE}
+## View matrix
+
+cont_ordcat_corr$r  %>%
+  data.frame() %>%
+  knitr::kable(format = "latex", booktabs = T) %>%
+  kableExtra::kable_styling(latex_options = "scale_down")
+```
+
+
+```{r, include = FALSE}
+## View p values for reference.
+### Note: they wont be very accurate, 
+### because of ties in the dataset, 
+### but will give a good reference
+
+cont_ordcat_corr$P %>%
+  data.frame(.)
+```
+
+ 
+We generate a correlation plot using the corrplot() function for better interpretation.
+
+```{r, fig.height=15, fig.width=15, fig.align="left"}
+## Correlation plot
+
+cont_ordcat_corr$r %>%
+  corrplot(., type = "upper", order = "hclust")
+  
+
+```
+
+
+**Observations:**
+
+1. Strong correlation is found between "accommodates", "beds", "bedrooms" and "bathrooms."
+2. High (negative) correlation between "review_scores_rating" and "review_time_diff."
+
+
+\subsubsubsection{Nominal Categorical Variables}
+
+We use Cramers'V association to find relationship among nominal categorical variables.
+
+Note that changing to factor data type, doesn't alter results, but lowers computation speed. As seen in the previous section, we plot the correlation matrix to interpret relations.
+
+```{r, warning= FALSE, message= FALSE}
+# Correlation among nominal categorical variables
+
+nomcatcorr <- function(variables, df){
+  
+  ## create dataframe
+  df_cor <- data.frame(id = 1:length(variables))
+  
+  ## convert variables to factor for better computation speed
+  df <- df %>%
+    mutate_at(., vars(all_of(variables)), as.factor)
+  
+  ## update dataframe
+  for(x in variables){
+    l <- vector(mode = "numeric")
+    for(y in variables){
+      l <- append(l, cramerV(df[[x]], df[[y]]) %>%
+                    round(., digits = 4))
+    }
+    df_cor[x] <- l
+  }
+  rownames(df_cor) <- all_of(variables)
+  df_cor <- df_cor %>%
+    select(-c("id"))
+
+  ##return dataframe
+  return(df_cor)
+}
+
+nomcat_corr_var <- df_modfit %>%
+  select(c(all_of(cat3_var), all_of(cat2_var))) %>%
+  colnames(.)
+
+
+nomcat_corr <- nomcatcorr(variables = all_of(nomcat_corr_var), df = df_modfit)
+```
+
+```{r, include = FALSE}
+## View correlations
+
+nomcat_corr
+```
+
+
+```{r fig, fig.height= 30, fig.width= 30, fig.align="left"}
+## Correlation plot
+
+nomcat_corr %>%
+  as.matrix(.) %>%
+  corrplot(., type = "upper", is.corr = F, number.font = 100)
+```
+
+
+**Observations:**
+
+The above correlations lend credence to some practically anticipated relations. For instance, location specific data like “city”, “neighbourhood” and “zipcode” are found to be correlated. Along with these cases, we also find some relations that allow further interpretation of our data. Example, it can be seen that "Other" and "Other_pet" show high correlation, implying that the "Other" also refers to pet related information. The complete summary of variables showing high correlation from this plot can be found in Appendix (section \ref{correlation summary}).
+
+
+\subsubsubsection{Impact (of categorical variables) on Target Variables}
+
+For finding correlation between categorical variables and target variable we rely on significance tests. Null hypothesis is that there is no difference between mean values (of a continuous variable) of groups present within a (categorical) variable. If the p value is significant (say <0.05), we reject the null hypothesis and conclude that there is a difference and the variation is significant. We can thus imply that the same (categorical) variable is important for our analysis.
+
+We use independent Point-Biserial and ANOVA for the same. These tests assume that the dependent variable distribution is normal (parametric test), which is the case with “log_price”. ANOVA is used for categorical variables with 3 or more categories, while Point-Biserial is used for variables with 2 categories.
+
+
+```{r}
+# Correlation between nominal and continuous variable (only target variable)
+# Variables with 3+ categories
+
+## create function
+targetcat3_corr <- function(target, var_list, df){
+  l1 <- vector()
+  for (col in var_list){
+    l1 <- append(l1, round(summary(aov(df[[target]] ~
+                                        df[[col]]))[[1]]$'Pr(>F)'[1], 
+                          digits = 5))
+  }
+  df_corr <- data.frame(pval = l1)
+  rownames(df_corr) <- var_list
+  
+  return(df_corr)
+}
+
+
+## get correlation (p values)
+target_nomcat3_corr <- targetcat3_corr("log_price", all_of(cat3_var), 
+                                    df_modfit)
+
+##view
+target_nomcat3_corr %>%
+  knitr::kable(format = "latex", booktabs = T)
+
+```
+
+
+
+All the p-values show that there is a significant difference in means between different groups. Now we proceed to view association between categorical variables with two categories.
+
+
+```{r}
+# Correlation between nominal and continuous variable (only target variable)
+# Variables with 2 categories
+
+## create function
+targetcat2_corr <- function(target, var_list, df){
+  l1 <- vector()
+  l2 <- vector()
+  for (col in var_list){
+    l1 <- append(l1, round(cor.test(x = df[["log_price"]], 
+                                    y = df[[col]])[[4]], 
+                           digits = 4))
+    l2 <- append(l2, round(cor.test(x = df[["log_price"]], 
+                                    y = df[[col]])[[3]], 
+                           digits = 5))
+  }
+  df_corr <- data.frame(names = var_list, correlation = l1, pval = l2)
+
+  
+  return(df_corr)
+}
+
+
+## get correlation (p values)
+target_nomcat2_corr <- targetcat2_corr("log_price", 
+                                       df_modfit %>% 
+                                          select(all_of(cat2_var)) %>% 
+                                          colnames(), 
+                                       df_modfit)
+
+
+target_nomcat2_corr %>%
+  arrange(desc(correlation)) %>%
+  head(.) %>%
+  knitr::kable(format = "latex", booktabs = T)
+
+
+```
+
+```{r}
+# Interpreting target_nomcat2_corr
+
+## min max correlation vals
+print(c(max(target_nomcat2_corr["correlation"]),
+        min(target_nomcat2_corr["correlation"])))
+
+```
+
+Correlation and p-values are generated as shown in the above table. Having a high correlation but low p-value indicates that the correlation is not significant, i.e., it is due to random chance. Also, since the correlation values range approximately between -0.2 to 0.2, the p value is more useful to interpret variable significance.
+ 
+Note that it is possible to check for correlation between different groups present within a variable with the target variable as well. The dataframe needs to be one-hot encoded prior to using Point-Biserial correlation. For reference purpose, the results of this process are mentioned in Appendix (section \ref{within group}).
+
+```{r, include = FALSE}
+# View correlation df
+
+target_nomcat2_corr
+```
+
+
+We now review the interactions among variables plotting graphs.
+
+\subsubsection{Plot EDA Graphs}
+
+
+```{r, fig.height=25, fig.width=25, fig.align="left"}
+# Continuous Variables EDA Graphs
+
+## function for histogram
+
+panel.hist <- function(x, ...)
+{
+    usr <- par("usr"); on.exit(par(usr))
+    par(usr = c(usr[1:2], 0, 1.5) )
+    h <- hist(x, plot = FALSE)
+    breaks <- h$breaks; nB <- length(breaks)
+    y <- h$counts; y <- y/max(y)
+    rect(breaks[-nB], 0, breaks[-1], y, col = "cyan", ...)
+}
+
+df_modfit %>%
+  select(all_of(cont_var)) %>%
+  pairs(., lower.panel = NULL, diag.panel = panel.hist)
+
+
+
+
+
+```
+
+The above plots support our findings of correlation analysis, and also show the distribution of continuous variables. It is also observed that the target variable doesn't have a defined linear relationship with other continuous features. 
+
+
+```{r, fig.height=20, fig.width=20, message=FALSE, fig.align="left"}
+# Target variable and Categorical Variables plot1
+## use factor_list
+
+
+
+p <- list()
+i = 1
+for (col in factor_list){
+  p[[i]] <- df_modfit %>%
+    select("log_price", col) %>%
+    mutate_at(., vars(col), as.factor) %>%
+    ggplot(aes(y = log_price, x = (!!as.name(col)))) +
+    geom_boxplot() +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 90, 
+                                     vjust = 0.5, 
+                                     hjust = 1))
+  i = i+1
+    
+}
+
+do.call(grid.arrange, p)
+
+```
+
+As seen in the above plot, "host_has_profile_pic" is found to be an insignificant variable, since there is not much variation in the mean values of the two classes. It is further observed that ordinal categorical variables more or less show a linear relationship with target variable. Also, nominal categorical variables in the vein of "city" and "neighbourhood" account for a lot of variation in “log_price”. These are therefore important variables for our analysis.
+
+The "amenities_list" variables also support our conclusions found from correlation plots (refer "target_nomcat2_corr"). Insignificant variables have very less difference between the mean value or the quantile boundaries in general, while significant variables display contrary characteristics. The plots of "Family_kid_friendly" (important feature) and "Accessible_height_bed" (unimportant feature) are shown below for illustration purposes.
+
+
+```{r, results = "asis"}
+# Finding significant and insignificant var
+# for illustration
+
+## high correlation and significant variables
+target_nomcat2_corr %>%
+  arrange(desc(correlation)) %>%
+  head() %>%
+  knitr::kable(format = "latex", booktabs = T)
+
+## insignificant variables
+target_nomcat2_corr %>%
+  arrange(desc(pval)) %>%
+  head() %>%
+  knitr::kable(format = "latex", booktabs = T)
+
+
+```
+
+
+```{r, fig.align = "left"}
+# Target variable and Categorical Variables plot 2 for illustration
+
+p1 <- df_modfit %>%
+    select("log_price", "Family_kid_friendly") %>%
+    mutate_at(., vars("Family_kid_friendly"), as.factor) %>%
+    ggplot(aes(y = log_price, x = Family_kid_friendly)) +
+    geom_boxplot() +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 90, 
+                                     vjust = 0.5, 
+                                     hjust = 1))
+
+p2 <- df_modfit %>%
+    select("log_price", Accessible_height_bed) %>%
+    mutate_at(., vars("Accessible_height_bed"), as.factor) %>%
+    ggplot(aes(y = log_price, x = Accessible_height_bed)) +
+    geom_boxplot() +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 90, 
+                                     vjust = 0.5, 
+                                     hjust = 1))
+grid.arrange(p1, p2, ncol = 2)
+```
+
+
+Plots of all variables in amenities list can be viewed in the Appendix (section \ref{EDA amenities}).
+
+With the relations between different variables now interpreted, we now proceed to Data Modeling phase.
+
+```{r, include=FALSE}
+# Free up space
+rm(amenity_count, cont_ordcat_corr,  
+   nomcat_corr, p, p1, p2,
+   target_nomcat2_corr, target_nomcat3_corr,
+   factor_list, i, unique_counts,
+   panel.hist, targetcat3_corr)
+```
+
+
+\newpage
+\subsection{Data Modeling}
+
+As discussed in the previous section, most continuous variables display non-linear relationship with the target variable. Although, ordinal categorical variables are seen to show some linear relationship, while majority of the nominal categorical variable can also be useful for linear model since they are dichotomous. In this section, we develop our intended models, explaining different feature engineering techniques and tuning performed to optimize the same, before comparing them to discern the best performing model.
+
+The following models are developed to predict price listings:
+
+1. Naive Model
+2. Random Forest
+3. Decision Tree
+4. Linear Regression
+5. Ensemble Model: Decision Tree + Linear Regression
+
+We first take a look at feature importance and other data preparation steps for model building.
+
+\subsubsection{Data Preparation and Feature Importance}
+
+
+\subsubsubsection{Data Type Conversion and Column Names}
+
+The data type of categorical variables not one-hot encoded yet is converted to factor. Variables that shouldn't be included in our analysis (identity variables) are also excluded prior to splitting the dataset.
+
+```{r}
+# Data Preparation
+
+## convert categorical variables (not one hot encoded) to factor
+df_modfit <- df_modfit %>%
+  mutate_at(.,
+            vars(all_of(ordcat_var), 
+                 all_of(cat3_var)),
+            as.factor)
+
+
+## remove unneeded variables
+df_modfit <- df_modfit %>%
+  select(-c("id"))
+
+```
+
+\subsubsubsection{Feature Importance}
+
+The Random Forest model is employed to generate feature importance, corroborating earlier EDA findings. Taking into account non-linear relationship between target variable and continuous variables (found in EDA), and the proportion of nominal categorical variables present in our dataset, this non-linear regression ensemble model can be justifiably used for variable importance than a linear model.
+
+
+
+```{r, warning=FALSE}
+# train Random Forest for Feature Importance.
+### took 1.5-2 hrs to run
+
+## Set seed
+set.seed(1, sample.kind = "Rounding")
+
+## cv folds
+control <- trainControl(method = "cv", number = 3, p = 0.8)
+
+rf <- train(log_price ~., 
+            method = "rf",
+            data = df_modfit,
+            trControl = control,
+            ntree = 10,
+            tuneGrid = data.frame(mtry = seq(25,150,25)))
+```
+
+Looking at the variable importance, we confirm our earlier findings of EDA. Correlation values in "target_nomcat2_corr" follow same trend as feature importance, whilst providing additional insights about significance. We now derive and remove a few variables in accordance to our observations in EDA correlation and graphs, further corroborated by feature importance (Note: a low *ntree* value is used for higher computation speed. Changing *ntree* value didn't significantly change variable ranking in feature importance, used to add on to EDA results).
+
+```{r}
+# For variables with more than two categories, we check mean value
+
+## Location categorical variables: neighbour, city, zipcode
+print(c("neighbour", varImp(rf)$importance %>%
+  mutate(name = rownames(.)) %>%
+  filter(str_detect(name, "^neighbour")) %>%
+  .$Overall %>%
+  mean(.) %>%
+    round(., digits = 4)))
+
+print(c("city", varImp(rf)$importance %>%
+  mutate(name = rownames(.)) %>%
+  filter(str_detect(name, "^city")) %>%
+  .$Overall %>%
+  mean(.) %>%
+    round(., digits = 4)))
+
+print(c("zipcode", varImp(rf)$importance %>%
+  mutate(name = rownames(.)) %>%
+  filter(str_detect(name, "^zipcode")) %>%
+  .$Overall %>%
+  mean(.) %>%
+    round(., digits = 4)))
+
+```
+
+As seen, "city" has a higher mean feature importance, hence used for our intended models out of all other location categorical variables ("neighbourhood", "city", "zipcode").
+
+```{r}
+## Room accommodation categorical variables: accommodates, beds, bedrooms, bathrooms
+print(c("accommodates", varImp(rf)$importance %>%
+  mutate(name = rownames(.)) %>%
+  filter(str_detect(name, "^accommodates")) %>%
+  .$Overall %>%
+  mean(.) %>%
+    round(., digits = 4)))
+
+print(c("beds", varImp(rf)$importance %>%
+  mutate(name = rownames(.)) %>%
+  filter(str_detect(name, "^beds")) %>%
+  .$Overall %>%
+  mean(.) %>%
+    round(., digits = 4)))
+
+print(c("bedrooms", varImp(rf)$importance %>%
+  mutate(name = rownames(.)) %>%
+  filter(str_detect(name, "^bedrooms")) %>%
+  .$Overall %>%
+  mean(.) %>%
+    round(., digits = 4)))
+
+print(c("bathrooms", varImp(rf)$importance %>%
+  mutate(name = rownames(.)) %>%
+  filter(str_detect(name, "^bathrooms")) %>%
+  .$Overall %>%
+  mean(.) %>%
+    round(., digits = 4)))
+
+```
+
+Similarly, "bedrooms" is used for out of other related variables. This is in accordance with the general norm of defining rooms by *x* BHK, *x* denoting number of bedrooms. Variables in "amenities_list" are also viewed for feature importance. Below we show feature importance for some of these columns.
+
+```{r}
+## amenity list
+varImp(rf)$importance %>%
+  mutate(name = rownames(.)) %>%
+  mutate(name = str_replace_all(name, pattern = "`", replacement = "")) %>%
+  filter(name %in% amenities_list) %>%
+  arrange(desc(Overall)) %>%
+  head(10) %>%
+  knitr::kable(format = "latex", booktabs = T)
+```
+
+Therefore, considering the correlation between variables supported by EDA graphs and further justified by feature importance, we modify and prepare our dataset to be used by intended algorithms.
+
+```{r}
+## Derive variables
+df_modfit2 <- df_modfit %>%
+  mutate(INTERNET = 
+           as.numeric(df_modfit$Internet == 1 | 
+                        df_modfit$Wireless_Internet == 1),
+         TRANSLATION_MISSING = 
+           as.numeric(df_modfit$translation_missing_en_hosting_amenity_49 == 1|
+                        df_modfit$translation_missing_en_hosting_amenity_50 ==1),
+         WASHER_DRYER = 
+           as.numeric(df_modfit$Washer == 1|
+                        df_modfit$Dryer == 1 |
+                        df_modfit$Washer_Dryer == 1),
+         PETS_ALLOWED = 
+           as.numeric(df_modfit$Pets_allowed ==1 |
+                        df_modfit$Pets_live_on_this_property == 1|
+                        df_modfit$Dog == 1|
+                        df_modfit$Cat ==1 |
+                        df_modfit$Other == 1 |
+                        df_modfit$Other_pet == 1),
+         BEDROOM_FACILITIES = 
+           as.numeric(df_modfit$Hot_water == 1|
+                        df_modfit$Bed_linens == 1|
+                        df_modfit$Extra_pillows_and_blankets == 1),
+         COOKING_FACILITIES = 
+           as.numeric(df_modfit$Cooking_basics == 1 |
+                        df_modfit$Refrigerator == 1 |
+                        df_modfit$Dishes_and_silverware == 1|
+                        df_modfit$Microwave == 1 |
+                        df_modfit$Oven == 1 |
+                        df_modfit$Stove == 1 |
+                        df_modfit$Dishwasher == 1),
+         ACCESS_FRIENDLY = 
+           as.numeric(df_modfit$Step_free_access == 1 |
+                        df_modfit$Wide_clearance_to_bed == 1|
+                        df_modfit$Accessible_height_bed == 1 |
+                        df_modfit$Wide_doorway == 1 |
+                        df_modfit$Accessible_height_toilet == 1 |
+                        df_modfit$Wide_entryway == 1 |
+                        df_modfit$Wide_hallway_clearance == 1 |
+                        df_modfit$Flat == 1 |
+                        df_modfit$Well_lit_path_to_entrance == 1),
+         CHILDREN_FACILITIES = 
+           as.numeric(df_modfit$Childrens_dinnerware == 1 |
+                        df_modfit$Childrens_books_and_toys == 1),
+         HIGH_CHAIR =
+           as.numeric(df_modfit$High_chair == 1 |
+                        df_modfit$Pack_n_Play_travel_crib == 1),
+         PATHWAY = 
+           as.numeric(df_modfit$Flat_smooth_pathway_to_front_door == 1|
+                        df_modfit$Path_to_entrance_lit_at_night == 1 |
+                        df_modfit$Firm_matress == 1 |
+                        df_modfit$Firm_mattress == 1),
+         WASH_FACILITIES =
+           as.numeric(df_modfit$Hand_soap == 1 |
+                        df_modfit$Body_soap == 1 |
+                        df_modfit$Hand_or_paper_towel == 1 |
+                        df_modfit$Toilet_paper == 1 |
+                        df_modfit$Bath_towel == 1))
+
+
+
+
+## Remove unneeded columns
+df_modfit2 <- df_modfit2 %>%
+  select(-c(beds, accommodates, bathrooms, 
+            review_scores_rating,
+            neighbourhood, zipcode,
+            latitude,
+            c(Wireless_Internet, Internet),
+            c(translation_missing_en_hosting_amenity_50,
+              translation_missing_en_hosting_amenity_49),
+            c(Washer, Dryer, Washer_Dryer),
+            c(Pets_allowed, Pets_live_on_this_property,
+              Dog, Cat, Other, Other_pet),
+            c(Hot_water, Bed_linens, Extra_pillows_and_blankets),
+            Lockbox,
+            c(Coffee_maker, Refrigerator, Dishes_and_silverware, Microwave,
+            Oven, Stove, Dishwasher, Cooking_basics),
+            c(Step_free_access, Wide_clearance_to_bed, Accessible_height_bed,
+              Wide_doorway, Accessible_height_toilet, Wide_entryway,
+              Wide_hallway_clearance, Flat, Well_lit_path_to_entrance),
+            Luggage_dropoff_allowed,
+            BBQ_grill,
+            c(Childrens_dinnerware, Childrens_books_and_toys),
+            c(High_chair, Pack_n_Play_travel_crib),
+            c(Firm_matress, Firm_mattress, Path_to_entrance_lit_at_night, 
+              Flat_smooth_pathway_to_front_door),
+            c(Bath_towel, Hand_soap, Body_soap, Hand_or_paper_towel, Toilet_paper)
+            ))
+
+## Change colnames to suit model preferences (rpart)
+colnames(df_modfit2) <- make.names(colnames(df_modfit2))
+
+```
+
+
+
+
+As shown above, some variables are chosen out of a particular group, while others are merged. For example, new variable "INTERNET" merges information present in columns "Internet" and "Wireless Internet". We also modify column names for smooth running of models sensitive to same (rpart).
+
+\subsubsubsection{Splitting Dataset}
+
+Having completed the above steps, we now split the dataset over “log_price”. Accounting for the low number of rows present in our dataset, an 80/20 ratio is deemed fit for training and validation, ensuring enough data in both sets. For columns with high number of categories ("property_type"), it is further ensured that all categories in the validation set index are present in the training set.
+
+```{r, warning = FALSE, message=FALSE}
+# Split dataset into training and validation sets
+
+## Set seed
+set.seed(1, sample.kind = "Rounding")
+
+## Get test indices
+test_index <- createDataPartition(y = df_modfit2$log_price,
+                                  p = 0.2,
+                                  times = 1,
+                                  list = FALSE)
+
+## Create training and testing datasets
+df_training <- df_modfit2 %>% slice(-test_index)
+temp <- df_modfit2 %>% slice(test_index)
+
+## Make sure all categories in test set are present in train set
+df_validation <- temp %>%
+  semi_join(df_training, by = "property_type") 
+
+## Add removed rows back to training set
+removed <- anti_join(temp, df_validation)
+df_training <- rbind(df_training, removed)
+
+```
+
+
+The training dataset is further split to obtain an intermediate test set. While the caret library performs its own split and cross validation, this test set is used to compare different models, including those that do not inherently use cross validation.
+
+```{r, warning = FALSE, message=FALSE}
+# Split dataset for intermediate test set
+
+## Set seed
+set.seed(1, sample.kind = "Rounding")
+
+## Get test indices
+test_index <- createDataPartition(y = df_training$log_price,
+                                  p = 0.2,
+                                  times = 1,
+                                  list = FALSE)
+
+## Create training and testing datasets
+df_train <- df_training %>% slice(-test_index)
+temp <- df_training %>% slice(test_index)
+
+## Make sure all categories in test set are present in train set
+df_test <- temp %>%
+  semi_join(df_train, by = "property_type")
+
+## Add removed rows back to training set
+removed <- anti_join(temp, df_test)
+df_train <- rbind(df_train, removed)
+
+```
+
+
+We now proceed to train our models.
+
+\subsubsection{RMSE and R-squared}
+RMSE from the caret library is used to calculate loss function. For R-squared, we create a function as follows.
+
+```{r}
+# R-squared function definition
+
+R2 <- function(preds, actual){
+  rss <- sum((preds - actual) ^ 2)
+  tss <- sum((actual - mean(actual)) ^ 2)
+  rsq <- 1 - rss/tss
+  
+  return(rsq)
+}
+```
+
+\subsubsection{Naive Model}
+
+The Naive model only uses mean value to predict ratings. A results table is created showing RMSE and R-squared for prediction on intermediate test set.
+
+
+```{r}
+# Using mean to predict prices
+
+## fit model
+naive_model <- function(df, target_var){
+  return(mean(df[[target_var]]))
+}
+
+## Predict 
+y_hat_naive <- naive_model(df_train, "log_price")
+
+
+
+
+## Create results table
+results <- data.frame(method = "Only Average", 
+                      RMSE = RMSE(y_hat_naive, df_test$log_price),
+                      R2 = R2(y_hat_naive, df_test$log_price) %>%
+                        round(., digits = 4))
+
+## view results
+results
+```
+
+As discussed in previous sections (refer section \ref{metrics}), R-squared is found to be 0 while an RMSE value of 0.7168 is observed. We will now train other models to reduce this RMSE, while maintaining a decent R-squared value (above 55%).
+
+\subsubsection{Random Forest}
+Random Forest regression is used to develop our second model. 
+
+Random Forest is affected by parameters *mtry* and *ntree*. The caret library allows tuning for *mtry* using tuneGrid, while a *ntree* value of 50 is used for optimal results and high computation speed. 
+
+\subsubsubsection{Iteration 1}
+
+
+The first iteration is used to create a baseline model which we try to improve on.
+
+```{r, warning = FALSE}
+# Random Forest iteration 1
+### took about 1.5-2 hrs to run
+
+##set seed
+set.seed(1, sample.kind = "Rounding")
+
+## cv folds
+control <- trainControl(method = "cv", number = 3, p = 0.8)
+
+## fit model
+rf1 <- train(log_price ~., 
+            method = "rf",
+            data = df_train,
+            trControl = control,
+            ntree = 50)
+
+## Evaluate model
+rf1
+```
+
+RMSE of 0.4255 and R-squared of 0.6485 is obtained with *mtry* 81 (higher than number of predictors). We now try to improve this model, getting better results with minimum number of features and computation time.
+
+\subsubsubsection{Iteration 2}
+
+
+
+The model is tuned using mtry values around 81.
+
+```{r , warning = FALSE}
+# Random Forest iteration 2
+### took about 1.5-2 hrs to run
+
+## set seed
+set.seed(1, sample.kind = "Rounding")
+
+## cv folds
+control <- trainControl(method = "cv", number = 3, p = 0.8)
+
+## fit model
+rf2 <- train(log_price ~., 
+            method = "rf",
+            data = df_train,
+            trControl = control,
+            ntree = 50,
+            tuneGrid = data.frame(mtry = seq(75,90,3)))
+
+## Evaluate model
+rf2
+```
+
+An improvement from baseline model is observed, with lower RMSE (0.4245) and a higher R-squared (about 65%)
+
+\subsubsubsection{Iteration 3}
+
+In the final iteration, the aim is to reduce number of variables used while keeping similar RMSE and R-squared values.
+
+```{r}
+#Check variable importance
+
+## Values top 20
+varImp(rf2)$importance %>%
+  mutate(name = rownames(.)) %>%
+  arrange(desc(Overall)) %>%
+  head(20) %>%
+  as.matrix(.)
+
+## Values bottom 20
+varImp(rf2)$importance %>%
+  mutate(name = rownames(.)) %>%
+  arrange(desc(Overall)) %>%
+  tail(20) %>%
+  as.matrix(.)
+
+## Mean value
+mean(varImp(rf2)$importance$Overall)
+
+
+```
+
+We check the variable importance and plot graphs for better understanding.
+
+```{r, fig.height= 8, fig.width= 10, fig.align="left"}
+## Plot graph
+
+as.data.frame(varImp(rf2)$importance) %>%
+  mutate(name = rownames(.)) %>%
+  arrange(desc(Overall)) %>%
+  ggplot(aes(x = 1:length(rownames(varImp(rf2)$importance)), y = Overall)) +
+  geom_bar(stat = "identity", color = "black", fill = "grey") +
+  theme_bw() +
+  xlab("variables") +
+  scale_y_continuous(breaks = seq(0,100,2)) +
+  theme(axis.title = element_text(size = 13)) +
+  theme(axis.text = element_text(size = 8))
+
+```
+
+Variables with low importance don't contribute much to our model. Removing them will therefore improve productivity in both computation and future data collection, without considerably affecting our metrics. From the graph, variable importance shows notable decrease near certain values, such as 14, 8, 6, etc. Note that having extremely low number of variables may not be able to make business sense. It is therefore important to find a suitable value for filtering out variables. For our project, we filter out variables below variable importance 1. This leaves us with less than half the original number of variables, providing sufficient information for making business sense and also improving efficiency.
+
+```{r}
+## Filter features with little importance
+
+unimportant_vars_rf <- varImp(rf2)$importance %>%
+  mutate(name = rownames(.)) %>%
+  arrange(desc(Overall)) %>%
+  filter(Overall <=1) %>%
+  mutate(name = str_replace_all(name, pattern = "`", replacement = "")) %>%
+  filter(!str_detect(string = name, 
+                     pattern =
+                       "^city|^bedrooms|^property_type|^bed_type|^room_type|^cancellation_policy")) %>%
+  .$name
+
+## View top important variables and count
+df_train %>%
+  select(-all_of(unimportant_vars_rf), -c("log_price")) %>%
+  colnames(.) %>%
+  length() %>%
+  print()
+
+df_train %>%
+  select(-all_of(unimportant_vars_rf), -c("log_price")) %>%
+  colnames(.) %>%
+  head() %>%
+  print()
+```
+
+We now repeat the process of finding optimum parameters for this Random Forest.
+
+
+```{r, warning = FALSE}
+# Random Forest Iteration 3
+### took about 1.5-2 hrs to run
+
+## set seed
+set.seed(1, sample.kind = "Rounding")
+
+## cv folds
+control <- trainControl(method = "cv", number = 3, p = 0.8)
+
+## fit model
+rf3 <- train(log_price ~., 
+            method = "rf",
+            data = df_train %>%
+              select(-all_of(unimportant_vars_rf)),
+            trControl = control,
+            ntree = 50,
+            tuneGrid = data.frame(mtry = seq(35,50, 3)))
+
+## Evaluate model
+rf3
+```
+
+
+```{r, fig.align="left"}
+##plot
+
+plot(rf3)
+```
+
+
+We can see that *mtry* = 41 gave the best results. Thus, we reduced the number of variables by over half whilst maintaining a good R-squared and RMSE (values don't change much). The same are checked by predicting values for intermediate test set and results table is updated.
+
+```{r}
+# Predict for intermediate test set
+
+## get y_hat
+y_hat_rf <- predict(rf3, newdata = df_test)
+
+## update results
+results <- results %>%
+  rbind(data.frame(method = "Random Forest", 
+                      RMSE = RMSE(y_hat_rf, df_test$log_price),
+                      R2 = R2(y_hat_rf, df_test$log_price)))
+
+results
+```
+
+
+Similarly, other models are generated following same steps (three iterations).
+
+\subsubsection{Decision Tree}
+
+For decision tree, caret library enables tuning for complexity parameter (*cp*). Other parameters are tuned using rpart.control() function of rpart library.
+
+\subsubsubsection{Iteration 1}
+
+Create Baseline model.
+
+```{r, warning = FALSE}
+# Decision Tree Iteration 1
+
+## Set seed
+set.seed(1, sample.kind = "Rounding")
+
+## cv folds
+control <- trainControl(method = "cv", number = 3, p = 0.8)
+
+## fit model
+decisiontree1 <- train(log_price ~.,
+                      data = df_train,
+                      method = "rpart",
+                      trControl = control)
+
+## Evaluate model
+decisiontree1
+```
+
+
+\subsubsubsection{iteration 2}
+
+Model is tuned for better metrics.
+
+```{r, warning = FALSE}
+# Decision Tree Iteration 2
+
+## Set seed
+set.seed(1, sample.kind = "Rounding")
+
+## cv folds
+control <- trainControl(method = "cv", number = 3, p = 0.8)
+
+## fit model
+decisiontree2 <- train(log_price ~.,
+                      data = df_train,
+                      method = "rpart",
+                      trControl = control,
+                      control = rpart.control(minsplit = 2,
+                                              minbucket = 1),
+                      tuneGrid = data.frame(cp = seq(0.001, 0.035, 0.002)))
+
+## Evaluate model
+decisiontree2
+
+```
+
+A lower *cp* value, along with *minsplit* and *minbucket* values give the best results. 
+
+
+```{r, fig.height=25, fig.width= 45 , fig.align="left"}
+# plot tree
+
+plot(decisiontree2$finalModel)
+text(decisiontree2$finalModel,
+     cex = 1.8,
+     srt = 6,
+     splits = TRUE)
+```
+
+
+\subsubsubsection{Iteration 3}
+
+Only important variables are now chosen.
+
+```{r, fig.height= 8, fig.width= 10, fig.align="left"}
+# Check Variable Importance
+
+as.data.frame(varImp(decisiontree2)$importance) %>%
+  mutate(name = rownames(.)) %>%
+  arrange(desc(Overall)) %>%
+  ggplot(aes(x = 1:length(rownames(varImp(decisiontree2)$importance)), y = Overall)) +
+  geom_bar(stat = "identity", color = "black", fill = "grey") +
+  theme_bw() +
+  xlab("variables") +
+  scale_y_continuous(breaks = seq(0,100,2)) +
+  theme(axis.title = element_text(size = 13)) +
+  theme(axis.text = element_text(size = 8))
+
+```
+
+```{r}
+
+unimportant_vars_decisiontree <- varImp(decisiontree2)$importance %>%
+  mutate(name = rownames(.)) %>%
+  arrange(desc(Overall)) %>%
+  filter(Overall <=1) %>%
+  mutate(name = str_replace_all(name, pattern = "`", replacement = "")) %>%
+  filter(!str_detect(string = name, 
+                     pattern =
+                       "^city|^bedrooms|^property_type|^bed_type|^room_type|^cancellation_policy")) %>%
+  .$name
+
+df_train %>%
+  select(-all_of(unimportant_vars_decisiontree), -c("log_price")) %>%
+  colnames(.) %>%
+  length(.) %>%
+  print(.)
+
+df_train %>%
+  select(-all_of(unimportant_vars_decisiontree), -c("log_price")) %>%
+  colnames(.) %>%
+  head(.) %>%
+  print(.)
+```
+
+Fit again with only important variables.
+
+```{r, warning = FALSE}
+# Decision Tree Iteration 3
+
+## Set seed
+set.seed(1, sample.kind = "Rounding")
+
+## cv folds
+control <- trainControl(method = "cv", number = 3, p = 0.8)
+
+## fit model
+decisiontree3 <- train(log_price ~.,
+                      data = df_train %>%
+                        select(-all_of(unimportant_vars_decisiontree)),
+                      method = "rpart",
+                      trControl = control,
+                      control = rpart.control(minsplit = 2,
+                                              minbucket = 1),
+                      tuneGrid = data.frame(cp = seq(0.001, 0.035, 0.002)))
+
+## Evaluate model
+decisiontree3
+```
+
+```{r}
+# plot results
+
+plot(decisiontree3)
+```
+
+
+```{r, fig.height=25, fig.width= 45 , fig.align="left"}
+# plot tree
+
+plot(decisiontree3$finalModel)
+text(decisiontree3$finalModel,
+     cex = 1.8,
+     srt = 6,
+     splits = TRUE)
+```
+
+
+
+Thus, the number of predictor variables is reduced. Values for intermediate test set are now predicted and results table updated.
+
+```{r}
+# Predict for intermediate test set
+
+## get y_hat
+y_hat_rpart <- predict(decisiontree3, newdata = df_test)
+
+## update results
+results <- results %>%
+  rbind(data.frame(method = "Decision tree", 
+                      RMSE = RMSE(y_hat_rpart, df_test$log_price),
+                      R2 = R2(y_hat_rpart, df_test$log_price)))
+
+results
+```
+
+
+
+\subsubsection{Linear Regression}
+
+For Linear Regression, it is preferable to normalize data before training model.
+
+\subsubsubsection{Normalize}
+
+```{r}
+# normalize
+
+## for train set
+preproc1 <- preProcess(df_train[, which(colnames(df_train) %in% cont_var)[-1]], method = c("range"))
+
+df_train_norm <- predict(preproc1, df_train[, which(colnames(df_train) %in% cont_var)[-1]])
+
+df_train_norm <- df_train_norm %>% cbind(df_train[, -which(colnames(df_train) %in% cont_var)[-1]])
+
+## for intermediate test set
+preproc1 <- preProcess(df_test[, which(colnames(df_test) %in% cont_var)[-1]], method = c("range"))
+
+df_test_norm <- predict(preproc1, df_test[, which(colnames(df_test) %in% cont_var)[-1]])
+
+df_test_norm <- df_test_norm %>% cbind(df_test[, -which(colnames(df_test) %in% cont_var)[-1]])
+```
+
+As there is no tuning parameters for linear regression, we perform 2 iterations here.
+
+\subsubsubsection{Iteration 1}
+
+The baseline model is generated.
+
+```{r, warning = FALSE}
+# Linear Regression Iteration 1
+
+## Set seed
+set.seed(1, sample.kind = "Rounding")
+
+## cv folds
+control <- trainControl(method = "cv", number = 3, p = 0.8)
+
+## fit model
+linearfit1 <- train(log_price ~.,
+                      data = df_train_norm,
+                      method = "lm",
+                      trControl = control)
+
+
+## Evaluate model
+linearfit1
+```
+
+
+
+\subsubsubsection{Iteration 2}
+
+The p-value shows significance of variables. As discussed previously, null hypothesis is that the coefficient for the given variable in equation is zero. If the p-value is less than significance level (0.05 is assumed for our case), we can say that the given variable is significant with non-zero coefficient. On this premise, the second iteration utilizes only significant variables.
+
+
+```{r}
+#get coef table
+
+## extract coefficients
+varsig <- coef(summary(linearfit1))
+
+## getting names of significant variables
+mod1_varsig <- data.frame(pval = varsig[, 4] %>%
+             round(., digits = 4))
+
+## View insignificant vars
+invisible(mod1_varsig %>%
+ mutate(name = rownames(.)) %>%
+  arrange(pval) %>%
+  filter(pval >0.05 ) %>%
+  mutate(name = str_replace_all(name, pattern = "`", replacement = "")) %>%
+  filter(!str_detect(string = name, 
+                     pattern =
+                       "^city|^bedrooms|^property_type|^bed_type|^room_type|^cancellation_policy")))
+
+## Get var names
+insignificantvars <- mod1_varsig %>%
+ mutate(name = rownames(.)) %>%
+  arrange(pval) %>%
+  filter(pval >0.05 ) %>%
+  mutate(name = str_replace_all(name, pattern = "`", replacement = "")) %>%
+  filter(!str_detect(string = name, 
+                     pattern =
+                       "^city|^bedrooms|^property_type|^bed_type|^room_type|^cancellation_policy")) %>%
+  .$name
+
+```
+
+
+
+```{r, warning=FALSE}
+# Linear Regression Iteration 2
+
+## Set seed
+set.seed(1, sample.kind = "Rounding")
+
+## cv folds
+control <- trainControl(method = "cv", number = 3, p = 0.8)
+
+## fit model
+linearfit2 <- train(log_price ~.,
+                      data = df_train_norm %>%
+                      select(-all_of(insignificantvars)),
+                      method = "lm",
+                      trControl = control)
+
+## Evaluate model
+linearfit2
+```
+
+
+
+We see very little variation in metrics from our baseline model. Thus, we have reduced the number of features required.
+
+```{r}
+# Predict for intermediate test set
+
+## get y_hat
+y_hat_lm <- predict(linearfit2, newdata = df_test_norm)
+
+## update results
+results <- results %>%
+  rbind(data.frame(method = "Linear Regression", 
+                      RMSE = RMSE(y_hat_lm, df_test$log_price),
+                      R2 = R2(y_hat_lm, df_test$log_price)))
+
+results
+```
+
+\subsubsection{Ensemble Model: Linear Regression + Decision tree}
+
+While linear regression and decision tree by itself may be less accurate, it is possible to combine the two into an ensemble model. Having already trained the two models, we use average the results of predictions from individual model.
+
+```{r}
+# Models used to from ensemble
+
+linearfit2
+decisiontree2
+```
+
+```{r}
+# Predict for intermediate test set
+
+## get y_hat
+y_hat_ensemble <- (y_hat_rpart + y_hat_lm)/2
+
+## update results
+results <- results %>%
+  rbind(data.frame(method = "Ensemble Model: Decision Tree + Linear Regression", 
+                      RMSE = RMSE(y_hat_ensemble, df_test$log_price),
+                      R2 = R2(y_hat_ensemble, df_test$log_price)))
+
+results
+```
+
+Thus, Ensemble Model provides better results than its constituent algorithms, with a decent RMSE of 0.4529 and a R-squared of about 60%. It is also visible that Random Forest provides the best metrics and is therefore a suitable algorithm for our project. The final validation is now performed in the next section.
+
+\subsubsection{Validation}
+
+We use the entire training set for our final validation.
+
+```{r, warning= FALSE}
+# Validation
+
+## set seed
+set.seed(1, sample.kind = "Rounding")
+
+## cv folds
+control <- trainControl(method = "cv", number = 3, p = 0.8)
+
+## fit model
+rf3 <- train(log_price ~., 
+            method = "rf",
+            data = df_training %>%
+              select(-all_of(unimportant_vars_rf)),
+            trControl = control,
+            ntree = 50,
+            tuneGrid = data.frame(mtry = 41))
+
+## Evaluate model
+rf3
+```
+
+
+```{r}
+# Final model metrics
+
+## y_hat for Random Forest
+y_hat_rf <- predict(rf3, newdata = df_validation)
+
+## Final metrics table
+
+results_val <- data.frame(method = "Random Forest",
+                         RMSE = RMSE(y_hat_rf, df_validation$log_price),
+                         R2 = R2(y_hat_rf, df_validation$log_price) )
+
+```
+
+\newpage
+\section{Results}
+
+```{r}
+# Test set results for comparing all models
+
+results %>%
+  knitr::kable(format = "latex", booktabs = T)
+```
+
+For comparison purpose, we check the RMSE that the first model gives using entire "df_training" set and "df_validation" set.
+
+```{r}
+# Validation results
+
+y_hat_naive_val <- naive_model(df_training, "log_price")
+
+results_val <- results_val %>%
+  rbind(data.frame(method = "Only average",
+                   RMSE =RMSE(y_hat_naive_val, df_validation$log_price),
+                   R2 = R2(y_hat_naive_val, df_validation$log_price) %>%
+                     round(.,digits = 4)))
+
+results_val %>%
+  arrange(desc(RMSE)) %>%
+  knitr::kable(format = "latex", booktabs = T)
+```
+
+In general, it is observed that ensemble models performed better than other algorithms, even if similar number of features were utilized. While linear regression gave better metrics than the naive model, non-linear regression works best for our dataset, as is supported by data exploration stages. Note that decision tree provides inferior results compared to linear regression probably due to less amount of data present. This is tackled with bagging and bootstrapping by Random Forest algorithms, providing optimal metrics. As the results table shows, Random Forest gives the lowest value of loss function (RMSE). It also gives the highest R-squared values, explaining variance better than the other models. Using the Random Forest on validation set results in a significant reduction in RMSE and an increase in R-squared metrics compared to naive model.
+
+We have thus found the optimal values for all the machine learning algorithms used in our project, reduced the number of features required for the same and successfully built a decent predictive model for determining listing prices.
+
+\newpage
+\section{Conclusion}
+With an RMSE of 0.4122 and R-squared of about 67%, the Random Forest model employed shows great promise with minimum number of features used. Reducing the number of variables by over 50% significantly aids computation efficiency and at the same time, future data collection productivity.
+
+There is, nevertheless, still further scope to improve our model to obtain better metrics. The ensemble model generated provides the second-best results, with a linear regression model and a non-linear decision tree regression model. It is possible to improve this performance using certain transformations for better fit, especially for linear algorithms. For example, techniques like box-cox transformation may provide improved results. This can be explored for future improvements in model and comparisons with the Random Forest model.
+
+As discussed earlier, both RMSE and R-squared of a random forest are subject to the parameters used for tuning. While a R-squared value over 65% is a fairly good record, increasing *ntree* might further enhance the same. Normally, a value atleast 10 times the number of variables is empirically appropriate in Random Forest usage, although with a significantly increased computation time. A refined model is thus possible in our project, provided a higher computation time is allowed.
+
+The given predictive model utilizing important information from our dataset is therefore an able model, providing further scope and insights to build on for practical application.
+
+\newpage
+\section{References}
+
+1. Bradley Boehmke & Brandon Greenwell, 2020-02-01, Hands-On Machine Learning with R. [https://bradleyboehmke.github.io/HOML/]
+
+2. Max Kuhn, 2019-03-27, The caret Package. [https://topepo.github.io/caret/index.html]
+
+3. https://www.statisticshowto.com/
+
+4. https://towardsdatascience.com/
+
+5. http://www.sthda.com/
+
+6. https://www.listendata.com/
+
+\newpage
+\section{Appendix}
+
+\subsection{Nominal Variables Correlation Summary} \label{correlation summary}
+
+**Summary:** 
+
+High correlation (0.5 to 1):
+
+* city:
+  * neighbourhood, zipcode (> 0.9)
+  * Free_parking_on_premises (>0.5)
+  
+* neighbourhood:
+  * city (>0.9)
+  * zipcode (> 0.6)
+  * Air_conditioning, Elevator_in_building, Free_parking_on_premises (>0.5)
+  
+* zipcode:
+  * city (>0.9)
+  * neighbourhood, Elevator_in_building (>0.6)
+  * Air_conditioning, Pool, Free_parking_on_premises (>0.5)
+  
+* Wireless_internet:
+  * Internet (>0.9)
+  
+* Air_conditioning:
+  * neighbourhood, zipcode (>0.5)
+  
+* Family_kid_friendly:
+  * translation_missing_en_hosting_amenity_49 (>0.5)
+  
+* Hair_dryer:
+  * Iron (>0.6)
+  * Hangers (>0.5)
+  
+* Iron:
+  * Hair_dryer (>0.6)
+  * Hangers (> 0.5)
+  
+* translation_missing_en_hosting_amenity_50:
+  * translation_missing_en_hosting_amenity_49 (>0.7)
+  
+* Washer :  
+  * Dryer ( >0.9)
+  
+* Dryer:
+  * Washer (>0.9)
+  
+* Smoke_detector:
+  * Carbon_monoxide_detector (>0.5)
+  
+* Hangers:
+  * Hair_dryer, Iron, Laptop_friendly_workspace (>0.5)
+  
+* Laptop_friendly_workspace:
+  * Hangers (>0.5)
+  
+* Internet:
+  * Wireless_internet (>0.9)
+  
+* Elevator_in_building :
+  * zipcode (>0.6)
+  * neighbourhood, Elevator (>0.5)
+  
+* Pool:
+  * zipcode (>0.5)
+  
+* Free_parking_on_premises:
+  * city, neighbourhood, zipcode (>0.5)
+  
+* Dog:
+  * Pets_live_on_this_property (>0.6)
+  
+* cat:
+  * Pets_live_on_this_property (>0.5)
+  
+* Other_pet:  
+  * Other (>0.7)
+  
+* Pets_live_on_this_property:
+  * Dog (>0.6)
+  * Cat (>0.5)
+  
+* Hot_water: 
+  * Bed_linens (>0.8)
+  * Extra_pillows_and_blankets (>0.7)
+  * Dishes_and_silverware, Refrigerator (>0.6)
+  * Coffee_maker, Microwave, Cooking_basics, Oven, Stove (>0.5)
+  
+* Bed_linens: 
+  * Hot_water (>0.8)
+  * Extra_pillows_and_blankets (>0.7)
+  * Dishes_and_silverware, Refrigerator (>0.6)
+  * Coffee_maker, Microwave, Cooking_basics, Oven, Stove (>0.5)
+  
+* Extra_pillows_and_blankets:
+	* Hot_water, Bed_linens (>0.7)
+	* Coffee_maker, Refrigerator, Dishes_and_silverware, Microwave, Cooking_basics, Stove (>0.5)
+	
+* Coffee_maker:
+	* Dishes_and_silverware, Microwave, Cooking_basics, Stove, Refrigerator (>0.8)
+	* Oven (>0.7)
+	* Dishwasher (>0.6)
+	* Hot_water, Bed_linens, Extra_pillows_and_blankets (>0.5)
+	
+* Refrigerator:
+	* Cooking_basics, Oven, Stove, Dishes_and_silverware (>0.9)
+	* Microwave, Coffee_maker (>0.8)
+	* Hot_water, Bed_linens, Dishwasher (>0.6)
+	* Luggage_dropoff_allowed, Long_term_stays_allowed, Extra_pillows_and_blankets (>0.5)
+	
+* Dishes_and_silverware:
+	* Cooking_basics, Oven, Stove, Refrigerator (>0.9)
+	* Coffee_maker, Microwave (>0.8)
+	* Dishwasher (>0.7)
+	* Hot_water, Bed_linens (>0.6)
+	* Extra_pillows_and_blankets (>0.5)
+	
+* Garden_or_backyard:
+	* BBQ_grill (>0.5)
+	
+* Self_Check_In:
+	* Lockbox (>0.6)
+	
+* Lockbox:
+	* Self_Check_In (>0.6)
+	
+* translation_missing_en_hosting_amenity_49:
+	* translation_missing_en_hosting_amenity_50 (>0.7)
+	* Family_kid_friendly (>0.5)
+	
+* Elevator:
+	* Elevator_in_building (>0.5)
+	
+* Microwave:
+	* Coffee_maker, Refrigerator, Dishes_and_silverware, Cooking_basics, Oven, Stove (>0.8)
+	* Dishwasher (>0.6)
+	* Hot_water, Bed_linens, Extra_pillows_and_blankets (>0.5)
+	
+* Cooking_basics:
+	* Refrigerator, Dishes_and_silverware, Oven, Stove (>0.9)
+	* Coffee_maker, Microwave (>0.8)
+	* Dishwasher (>0.7)
+	* Hot_water, Bed_linens, Extra_pillows_and_blankets (>0.5)
+	
+* Oven:
+	* Refrigerator, Dishes_and_silverware, Cooking_basics, Stove (>0.9)
+	* Microwave (>0.8)
+	* Coffee_maker, Dishwasher (>0.7)
+	* Hot_water, Bed_linens (>0.5)
+	
+* Stove:
+	* Refrigerator, Dishes_and_silverware, Cooking_basics (>0.9)
+	* Coffee_maker, Microwave (>0.8)
+	* Dishwasher (>0.7)
+	* Hot_water, Bed_linens, Extra_pillows_and_blankets, Long_term_stays_allowed (>0.5)
+	
+* Dishwasher:
+	* Dishes_and_silverware, Cooking_basics, Oven, Stove (>0.7)
+	* Coffee_maker, Refrigerator, Microwave (>0.6)
+	
+* Luggage_dropoff_allowed:
+	* Refrigerator, Long_term_stays_allowed (>0.5)
+	
+* Step_free_access:
+	* Well_lit_path_to_entrance, Wide_clearance_to_bed, Wide_doorway (>0.6)
+  * Accessible_height_bed, Wide_entryway, Wide_hallway_clearance, Flat, smooth_pathway_to_front_door (>0.5)
+
+* Wide_clearance_to_bed:
+	* Step_free_access, Accessible_height_bed, Wide_doorway, Wide_entryway (>0.6)
+  * Accessible_height_toilet, Wide_hallway_clearance, Flat, smooth_pathway_to_front_door, Well_lit_path_to_entrance (>0.5)
+
+* Accessible_height_bed:
+	* Wide_clearance_to_bed, Accessible_height_toilet (>0.6)
+	* Step_free_access, Wide_doorway, Wide_entryway (>0.5)
+
+* Wide_doorway:
+  * Step_free_access, Wide_clearance_to_bed, Wide_entryway, Wide_hallway_clearance, Flat, smooth_pathway_to_front_door, Well_lit_path_to_entrance (>0.6)
+  * Accessible_height_bed (>0.5)
+	
+* Accessible_height_toilet:
+	* Accessible_height_bed (>0.6)
+	* Wide_clearance_to_bed, Wide_entryway, Wide_clearance_to_shower_&_toilet (>0.5)
+
+* Wide_entryway:
+	* Wide_clearance_to_bed, Wide_doorway (>0.6)
+	* Step_free_access, Accessible_height_bed, Accessible_height_toilet, Wide_hallway_clearance, Flat, smooth_pathway_to_front_door, Wide_clearance_to_shower_&_toilet (>0.5)
+
+* Pack_n_Play_travel_crib:
+	* High_chair (>0.5)
+
+* Wide_hallway_clearance:   
+	* Wide_doorway (>0.6)
+  * Step_free_access, Wide_clearance_to_bed, Wide_entryway, Flat, smooth_pathway_to_front_door, Well_lit_path_to_entrance (>0.5)
+
+* Flat:
+  * smooth_pathway_to_front_door (1)
+  * Wide_doorway (>0.6)
+  * Step_free_access, Wide_clearance_to_bed, Wide_entryway, Wide_hallway_clearance, Well_lit_path_to_entrance (>0.5)
+
+* smooth_pathway_to_front_door:
+	* Flat (1)
+	* Wide_doorway (>0.6)
+  * Step_free_access, Wide_clearance_to_bed, Wide_entryway, Wide_hallway_clearance, Well_lit_path_to_entrance (>0.5)
+  
+* Well_lit_path_to_entrance:
+	* Step_free_access, Wide_doorway (>0.6)
+  * Wide_clearance_to_bed, Wide_hallway_clearance, Flat, smooth_pathway_to_front_door (>0.5)
+
+* Long_term_stays_allowed:
+	* Refrigerator, Stove, Luggage_dropoff_allowed (>0.5)
+	
+* Childrens_books_and_toys:
+	* Childrens_dinnerware (>0.6)
+	
+* Childrens_dinnerware:
+	* Childrens_books_and_toys (>0.6)
+	
+* BBQ_grill:
+	* Garden_or_backyard (>0.5)
+	
+* High_chair:
+  * Pack_n_Play_travel_crib (>0.5)
+  
+* Other:
+	* Other_pet (>0.7)
+	
+* Wide_clearance_to_shower_&_toilet:
+	* Accessible_height_toilet, Wide_entryway (>0.5)
+	
+* Path_to_entrance_lit_at_night:
+	* Firm_matress, Flat_smooth_pathway_to_front_door (>0.5)
+	
+* Firm_matress:
+	* Path_to_entrance_lit_at_night, Flat_smooth_pathway_to_front_door (>0.5)
+	
+* Flat_smooth_pathway_to_front_door:
+	* Path_to_entrance_lit_at_night, Firm_matress (>0.5)
+	
+* Body_soap:
+	* Hand_soap, Bath_towel, Hand_or_paper_towel, Toilet_paper (1)
+
+	
+
+\subsection{Correlation between target variable and all categorical variables (all categories)} \label{within group}
+```{r}
+# One-hot encode variables
+temp <- df_modfit %>%
+  mutate_at(.,
+            vars(all_of(ordcat_var), 
+                 all_of(cat3_var)),
+            as.factor)
+
+dmy <- dummyVars("~.", data = temp)
+df_1h <- data.frame(predict(dmy, newdata = temp))
+
+```
+
+
+
+```{r}
+# Correlation between nominal and continuous variable (only target variable)
+# Variables with 2 categories (We also use one-hot encoded variables)
+# Checking for different categories within a variable as well
+
+## create function
+targetcat2_corr <- function(target, var_list, df){
+  l1 <- vector()
+  l2 <- vector()
+  for (col in var_list){
+    l1 <- append(l1, round(cor.test(x = df[["log_price"]], 
+                                    y = df[[col]])[[4]], 
+                           digits = 4))
+    l2 <- append(l2, round(cor.test(x = df[["log_price"]], 
+                                    y = df[[col]])[[3]], 
+                           digits = 5))
+  }
+  df_corr <- data.frame(names = var_list, correlation = l1, pval = l2)
+  rownames(df_corr) <- var_list
+  
+  return(df_corr)
+}
+
+
+## get correlation (p values)
+target_nomcat2_corr <- targetcat2_corr("log_price", 
+                                       df_1h %>% 
+                                          select(-all_of(cont_var)) %>% 
+                                          colnames(), 
+                                       df_1h)
+
+### mentioning 20 vars
+## high correlation and significant variables
+target_nomcat2_corr %>%
+  arrange(desc(correlation)) %>%
+  head(20) %>%
+  as.matrix()
+
+## insignificant variables
+target_nomcat2_corr %>%
+  arrange(desc(pval)) %>%
+  head(20) %>%
+  as.matrix()
+
+
+```
+
+\subsection{EDA graphs between target variable and nominal variables with two categories} \label{EDA amenities}
+
+```{r, fig.height= 70, fig.width=50, fig.align="left"}
+# Target variable and Categorical variables plot 2
+
+p <- list()
+i = 1
+for (col in amenities_list){
+  p[[i]] <- df_modfit %>%
+    select("log_price", col) %>%
+    mutate_at(., vars(col), as.factor) %>%
+    ggplot(aes(y = log_price, x = (!!as.name(col)))) +
+    geom_boxplot() +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 90, 
+                                     vjust = 0.5, 
+                                     hjust = 1)) +
+    theme(axis.title = element_text(size = 15)) +
+    theme(axis.text = element_text(size = 15))
+  i = i+1
+    
+}
+
+do.call(grid.arrange, c(p, ncol = 15))
+
+
+```
