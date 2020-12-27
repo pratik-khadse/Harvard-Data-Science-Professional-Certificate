@@ -1,0 +1,1399 @@
+---
+title: "MovieLens Recommendation System"
+author: "Pratik Khadse"
+date: "10/25/2020"
+output: pdf_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+\setcounter{tocdepth}{5}
+\setcounter{secnumdepth}{5}
+
+\tableofcontents
+
+\newpage
+\section{Overview}
+
+
+
+During the last few decades, with the rise of YouTube, Amazon, Netflix and many other such web services, recommendation systems have taken more and more place in our lives. From e-commerce (suggest to buyers articles that could interest them) to online advertisement (suggest to users the right contents, matching their preferences), recommendation systems are today unavoidable in our daily online journeys.
+
+In a very general way, recommendation systems are algorithms aimed at suggesting relevant items to users (items being movies to watch, text to read, products to buy or anything else depending on industries). They are really critical in some industries as they can generate a huge amount of income when they are efficient or also be a way to stand out significantly from competitors. As a proof of the importance of recommendation systems, we can mention that, a few years ago, Netflix organized a challenges (the “Netflix prize”) where the goal was to produce a recommendation system that performs better than its own algorithm with a prize of 1 million dollars to win.
+
+In this project, we try to build a recommendation system, by predicting the ratings a user will give to a movie. Consisting of 10M records, we use the Movielens dataset for our model. A regularized model is employed, selecting the factors which gives the least error in prediction.
+
+The dataset downloaded is first split it into training and validation set, named as "edx" and "validation", with a 90/10 proportion as directed by edx content (problem statement). We check the "edx" set for understanding the effect of different parameters on our target variable. Some Data Cleaning and Preparation steps are performed to obtain additional variables deemed useful for our analysis. These steps are performed on both the "edx" and "validation" set, making sure the said changes maintain the principle of having training and validation sets (Data is only structured differently, additional rows of data are not added). Additional variables are derived, with usefulness of the same confirmed by performing Exploratory Data Analysis on "edx" set. Appropriate loss function (Root Mean Squared Error) is employed to compare models, desired value of which should be below 0.86490 as per our problem statement.
+
+This report takes you through the various stages of project development, explaining various steps of model building and logical reasoning behind the same.
+
+\subsection{About Dataset}
+
+GroupLens Research has collected and made available rating data sets from the MovieLens web site (http://movielens.org). The data sets were collected over various periods of time, depending on the size of the set. The full data set contains 26,000,000 ratings and 750,000 tag applications applied to 45,000 movies by 270,000 users.
+
+We use a smaller dataset with 10M ratings for different movies, consisting of information regarding movie title, genres, unique ids for different users and movies, along with the rating. The following link is used to download the same: http://files.grouplens.org/datasets/movielens/ml-10m.zip
+
+
+\newpage
+\section{Methodology}
+\subsection{Literature Review: Regularized Model}
+
+Recommendation systems are complicated machine learning challenges. It is due to the fact that for every cell, essentially the entire matrix can be used as predictor.
+
+For our model, we use estimates for what we call "bias" or also called "Effects". Eg: we start with a simple model which uses mean rating as prediction. This is shown as
+
+
+$$
+Y_{u,i} = \mu +\epsilon_{u,i} 
+$$
+The Root Mean Squared Error tells us how our predictions vary from the actual target variable values. This loss function is obtained using equation:
+
+$$
+\sqrt{\frac{1}{N} \sum_{u,i} (\hat{y}_{u,i} - y_{u,i})^2}
+$$
+
+
+where N  is the number of user-movie combinations,  $y_{u,i}$  is the rating for movie  i  by user  u , and  $\hat{y}_{u,i}$ is our prediction.
+
+
+We can improve our prediction earlier by adding a term $b_i$, which represents average rating for movie i. This is because we know some movies have a higher rating than others.
+
+$$
+Y_{u,i} = \mu + b_i+ \epsilon_{u,i}
+$$
+To make further improvements, we can add a term for user effects. We include a term, $b_u$, which is the user-specific effect. So now if a cranky user- this is a negative $b_u$- rates a great movie, which will have a positive $b_i$, the effects counter each other, and we may be able to correctly predict that this user gave a great movie a three rather than a five, which will happen. And that should improve our predictions. 
+
+The regularized model constrains the total variability of the effect sizes by penalizing large estimates that come from small sample sizes. To obtain estimates for b's, we minimize the following equation:
+
+$$
+Loss function = \frac{1}{N} \sum_{u,i}(y_{u,i} - \mu - b_i)^2 + \lambda\sum_ib_i^2
+$$
+
+The first term gives the MSE or Mean Squared Error, the second is a penalty term which gets larger. We obtain the values of b by taking derivatives, arriving at the equation:
+
+
+$$
+\hat{b}_i(\lambda) = \frac{1}{\lambda + n_i} \sum_{u=1}^{n_i} (Y_{u,i} - \hat{\mu})
+$$
+where  $n_i$  is number of ratings  b  for movie  i 
+
+The same can be extended to other effects as we add them. Example, using movie and user effects, the equation would look as follows:
+
+$$
+Loss function = \frac{1}{N} \sum_{u,i}(y_{u,i} - \mu - b_i - b_u)^2 + \lambda(\sum_ib_i^2 + \sum_u b_u^2)
+$$
+Similarly, the final equation used for making predictions is thus given by,
+$$
+Y_{u,i} = \mu + {\underbrace{b_i}_{\text{Movie effect}}} + {\underbrace{b_u}_{\text{User effect}}} + {\underbrace{b_{yrate}}_{\text{Year of Movie Rating effect}}} +{\underbrace{b_{yrel}}_{\text{Year of Movie Release effect}}} + {\underbrace{b_g}_{\text{Genre effect}}} + \epsilon_{u,i}
+$$
+with biases/effects derived by minimizing equation,
+
+$$
+Loss function = \frac{1}{N} \sum_{u,i}(y_{u,i} - \mu - b_i - b_u - b_{yrate} - b_{yrel} - b_g)^2 + \lambda(\sum_ib_i^2 + \sum_u b_u^2 + \sum_{yrate} b_{yrate}^2 + \sum_{yrel} b_{yrel}^2 + \sum_g b_g^2 )
+$$
+Where, 
+
+$i$ represents movieId
+
+$u$ represents userId
+
+$yrate$ is the year when  with movie $i$ was rated by user $u$
+
+$yrel$ is the year when movie $i$ was released
+      
+and 
+$$
+b_g = \sum_{k=1}^K x_{u,i}^k b_k
+$$
+      
+with $x_{u,i}^k=1$ if $g_{u,i}$ (genre for movie $i$ rated by user $u$) belongs to genre $k$.
+
+We now proceed with building our model to make predictions.
+
+\newpage
+
+\subsection{Importing Libraries and Downloading data}
+
+Required libraries are first imported, following which we obtain the "edx" and "validation" sets for training and validation respectively.
+
+
+```{r shortcuts,include = FALSE, echo=FALSE}
+# Ctrl+Shift+Enter to Run chunk
+# Ctrl+Alt+I to Insert chunk
+# Ctrl+Shift+K to Knit
+```
+
+```{r TinyTex, include = FALSE}
+#tinytex::install_tinytex()
+tinytex:::is_tinytex()
+#install.packages("kableExtra")
+```
+
+\subsubsection{Libraries}
+```{r, message = FALSE, warning = FALSE}
+options(digits = 5)
+
+library(tidyverse)
+library(caret)
+library(data.table)
+library(tidyr)
+library(lubridate)
+
+#Or use the following if packages are not installed earlier
+
+# if(!require(tidyverse)) install.packages("tidyverse", 
+#                                          repos = "http://cran.us.r-project.org")
+# if(!require(caret)) install.packages("caret", 
+#                                      repos = "http://cran.us.r-project.org")
+# if(!require(data.table)) install.packages("data.table", 
+#                                           repos = "http://cran.us.r-project.org")
+# if(!require(tidyr)) install.packages("tidyr", 
+#                                      repos = "http://cran.us.r-project.org")
+# if(!require(lubridate)) install.packages("lubridate", 
+#                                          repos = "http://cran.us.r-project.org")
+
+```
+
+
+
+\subsubsection{Create Edx and Validation Sets}
+```{r, message = FALSE, warning = FALSE}
+
+##########################################################
+# Create edx set, validation set (final hold-out test set)
+##########################################################
+
+#Note: this takes couple of minutes. This code is provided by Edx community
+
+# Download files
+dl <- tempfile()
+download.file("http://files.grouplens.org/datasets/movielens/ml-10m.zip", dl)
+
+## Create dataframe
+ratings <- fread(text = gsub("::", "\t", readLines(unzip(dl, "ml-10M100K/ratings.dat"))), 
+                 col.names = c("userId", "movieId", "rating", "timestamp"))
+
+movies_temp <- str_split_fixed(readLines(unzip(dl, "ml-10M100K/movies.dat")), "\\::", 3)
+colnames(movies_temp) <- c("movieId", "title", "genres")
+
+movies <- as.data.frame(movies_temp) %>%
+  mutate(movieId = as.numeric(movieId),
+         title = as.character(title),
+         genres = as.character(genres))
+
+movielens <- left_join(ratings, movies, by = "movieId")
+head(movielens) %>%
+  knitr::kable()
+
+# Validation set will be 10% of Movielens data
+set.seed(1, sample.kind = "Rounding")
+test_index <- createDataPartition(y = movielens$rating, 
+                                  times = 1, p = 0.1, list = FALSE)
+edx <- movielens[-test_index, ]
+temp <- movielens[test_index, ]
+
+# Make sure userId and movieId in validation set are also in edx set
+validation <- temp %>%
+  semi_join(edx, by = "movieId") %>%
+  semi_join(edx, by = "userId")
+
+#Add removed rows from validation set back to edx set
+removed <- anti_join(temp, validation)
+edx <- rbind(edx, removed)
+
+#remove unneeded objects
+rm(dl, ratings, movies, test_index, temp, movielens, removed) 
+
+```
+
+\subsection{Sanity checks}
+
+Here we do a basic sanity check on the training data, checking number of rows, columns and some summary statistics. This is a useful part of Data Understanding.
+
+
+```{r, message=FALSE}
+#rows and columns
+dim(edx)
+```
+
+
+```{r, message=FALSE}
+#summary statistics
+summary(edx) %>%
+  knitr::kable()
+
+```
+
+A plot is made further to see how count of ratings is distributed.
+
+```{r, message= FALSE}
+#Half star vs full star ratings
+edx %>%
+  group_by(rating) %>%
+  summarize(n = n()) %>%
+  ggplot(aes(x = rating, y = n)) +
+  geom_line()
+```
+
+Thus, we see high number of full star ratings than half star. This is later also confirmed in our Exploratory Data Analysis for genre.
+
+\newpage
+\subsection{Data Cleaning and Preparation}
+
+The edx dataset can be seen consisting of following variables:-
+
+1. userId: unique ID for each user who rated one or more movies
+2. movieId: unique ID for each movie that received ratings from one or more users.
+3. rating: a rating given on a scale of 1 to 5.
+4. timestamp: containing information about when the movie was rated
+5. title: The title of the movie, along with the year in which the movie was released.
+6. genres: the movie genres associated to a movie
+
+For our analysis, certain variables shall be derived for better performance. Year of movie release, year of movie rating and columns for individual genre form useful information that are included in our model. These are obtained as shown below.
+
+\subsubsection{Obtain YearOfRating from timestamp}
+
+```{r}
+edx <- edx %>%
+  mutate(YearOfRating = year(as_datetime(timestamp))) 
+
+validation <- validation %>%
+  mutate(YearOfRating = year(as_datetime(timestamp)))
+```
+ 
+The changes are also made in validation set, while respecting the principle behind training and testing sets, i.e., already present information is structured differently, without adding new information to validation set.
+
+\subsubsection{Obtain YearOfRelease from title}
+
+```{r}
+# for edx
+edx <- edx %>%
+  mutate(temp = str_extract(edx$title, "\\(\\d{4}\\)")) %>%
+  mutate(YearOfRelease = as.numeric(str_extract(temp, "\\d{4}"))) %>%
+  select(-temp)%>%
+  select(userId, movieId, title, YearOfRelease, YearOfRating, genres, rating)
+
+# for validation
+
+validation <- validation %>%
+  mutate(temp = str_extract(title, "\\(\\d{4}\\)")) %>%
+  mutate(YearOfRelease = as.numeric(str_extract(temp, "\\d{4}"))) %>%
+  select(-temp) %>%
+  select(userId, movieId, title, YearOfRelease, YearOfRating, genres, rating)
+```
+ 
+\subsubsection{Generate single rows for every genre value}
+Alongside generating individual columns for different genre, we generate a separate training (edx1) set with genres in different rows. This is useful for EDA, grouping by genre, which will be seen further.
+
+```{r}
+# for edx
+edx1 <- edx %>%
+  separate_rows(., genres, sep = "\\|")
+
+```
+
+
+
+\subsubsection{Create Individual columns for genres}
+```{r}
+#Convert genres to individual columns
+#Note we have to consider all factors of genres, 
+#so there is no need to exclude one, for the dummy variable trap is inapplicable here
+genre <- unique(edx1$genres)
+
+# for edx
+for (element in genre){
+  edx <- edx %>%
+    mutate(!!element := 
+             ifelse(str_detect(edx$genres, element), 1, 0)) 
+  ## We use Dynamic Variable here
+
+}
+
+edx <- edx %>%
+  select(-genres)
+
+# for validation
+for (element in genre){
+  validation <- validation %>%
+    mutate(!!element := 
+             ifelse(str_detect(validation$genres, element), 1, 0)) 
+  ## We use Dynamic Variable here
+
+}
+
+validation <- validation %>%
+  select(-genres)
+
+```
+
+
+
+\subsubsection{Rename genre columns for better accessibility}
+
+We do some cleaning, renaming to replace spaces and hyphens with underscores, and removing spaces for better accessibility later.
+```{r}
+#replace -, spaces with _ and remove ()
+
+# for edx
+colnames(edx)[str_detect(names(edx), pattern = "-")] <-
+  str_replace_all(colnames(edx)[str_detect(names(edx), pattern = "-")], 
+                pattern = "-",
+                replacement = "_")
+
+colnames(edx)[str_detect(names(edx), pattern = "\\(")] <-
+  str_replace_all(colnames(edx)[str_detect(names(edx), pattern = "\\(")], 
+                pattern = "\\s",
+                replacement = "_")
+
+colnames(edx)[str_detect(names(edx), pattern = "\\(")] <-
+  str_replace_all(colnames(edx)[str_detect(names(edx), pattern = "\\(")], 
+                pattern = "\\(|\\)",
+                replacement = "")
+
+# for validation
+
+colnames(validation)[str_detect(names(validation), pattern = "-")] <-
+  str_replace_all(colnames(validation)[str_detect(names(validation), 
+                                                  pattern = "-")], 
+                pattern = "-",
+                replacement = "_")
+
+colnames(validation)[str_detect(names(validation), pattern = "\\(")] <-
+  str_replace_all(colnames(validation)[str_detect(names(validation), 
+                                                  pattern = "\\(")], 
+                pattern = "\\s",
+                replacement = "_")
+
+colnames(validation)[str_detect(names(validation), pattern = "\\(")] <-
+  str_replace_all(colnames(validation)[str_detect(names(validation), 
+                                                  pattern = "\\(")], 
+                pattern = "\\(|\\)",
+                replacement = "")
+```
+
+
+After completing all data cleaning and preparation operations above, our "edx" and "validation" set look as follows.
+
+```{r view}
+head(edx) %>%
+  knitr::kable(format = "latex", booktabs = TRUE) %>%
+          kableExtra::kable_styling(latex_options = "scale_down")
+```
+
+```{r}
+head(validation) %>%
+  knitr::kable(format = "latex", booktabs = TRUE) %>%
+          kableExtra::kable_styling(latex_options = "scale_down")
+```
+
+
+We now advance to Understanding relations between variables.
+
+\newpage
+\subsection{Exploratory Data Analysis: Check patterns in variables}
+
+In order to understand the impact of above specified variables on the target variable "rating", we perform Exploratory Data Analysis. 
+
+\subsubsection{UserId}
+
+```{r, message=FALSE}
+# Plotting mean ratings of users: we see the distribution is left skewed
+# Also considerable variation is seen, which makes it an important variable
+
+edx %>%
+  group_by(userId) %>%
+  summarize(mean_rating = mean(rating)) %>%
+  ggplot(aes(x = mean_rating)) +
+  geom_histogram(color = "black")
+```
+
+
+
+```{r, message=FALSE}
+# Plotting median of ratings: we see that most median values lie between 3 and 4
+
+
+edx %>%
+  group_by(userId) %>%
+  summarize(median_ratings = median(rating)) %>%
+  ggplot(aes(x = median_ratings)) +
+  geom_histogram(color = "black")
+
+```
+
+From the above graphs, we notice that mean of ratings gives us more information (since it displays greater variation) when plotted against userId. This can also be seen in the graphs for other variables. 
+
+\subsubsection{MovieId}
+
+
+```{r, message=FALSE}
+# Mean for movies
+edx %>%
+  group_by(movieId) %>%
+  summarize(mean_rating = mean(rating)) %>%
+  ggplot(aes(x = mean_rating)) +
+  geom_histogram(color = "black")
+
+```
+
+```{r, include=FALSE, message=FALSE}
+#Plot median of ratings
+edx %>%
+  group_by(movieId) %>%
+  summarize(median_rating = median(rating)) %>%
+  ggplot(aes(x = median_rating)) +
+  geom_histogram(color = "black")
+
+# We see more variation with median ratings in movieId than in user Id,
+# still we get better results using mean  
+```
+
+\subsubsection{Genres}
+```{r, include=FALSE, message=FALSE}
+# Barplot for genres using mean rating
+edx1 %>%
+  group_by(genres) %>%
+  summarize(mean_rating = mean(rating)) %>%
+  ggplot(aes(x = genres, y = mean_rating)) +
+  geom_bar(stat = "identity") +
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))
+
+## We see that not much variation is seen in genres,
+# so the effect of this should'nt be very significant
+```
+
+
+```{r, include=FALSE, message=FALSE}
+# Barplot for genres using median
+edx1 %>%
+  group_by(genres) %>%
+  summarize(median_rating = median(rating)) %>%
+  ggplot(aes(x = genres, y = median_rating)) +
+  geom_bar(stat = "identity") +
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))
+## We see lesser variation with median, similar to earlier cases
+```
+
+
+```{r, message = FALSE}
+# Plot count of no of ratings for genres. 
+# We see that it follows the general trend, spikes for integer rating, 
+# lower count for decimal ratings
+edx1 %>%
+  group_by(genres, rating) %>%
+  summarize(n = n()) %>%
+  ggplot(aes(x = rating, y = n, color = genres)) +
+  geom_line(size = 2)
+
+```
+
+Plotting the count of no of ratings for genres, we see that it conforms to the earlier stated trend of integer ratings accounting for a greater proportion. We also plot count of ratings for each genre, to see the proportion of different genres in our dataset.
+
+```{r, message=FALSE}
+## Also plotting ratings received for each genre
+edx1 %>%
+  group_by(genres) %>%
+  summarize(count = n()) %>%
+  ggplot(aes(x = genres, y = count)) +
+  geom_bar(stat = "identity") +
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))
+
+```
+We can see many user watched action, comedy and drama than rest of the genres.
+For our model, we have included all the genres, though we can remove those that account for a small number. This wont have much impact on our model. 
+
+
+\subsubsection{YearOfRating}
+```{r, message = FALSE}
+# Plot mean ratings
+edx %>%
+  group_by(YearOfRating) %>%
+  summarize(mean_rating = mean(rating)) %>%
+  ggplot(aes(x = YearOfRating, y = mean_rating)) +
+  geom_line()
+
+
+```
+We see that mean ratings fell as we moved ahead in time. This can thus be an important variable (effect) in our analysis.
+
+```{r,include=FALSE, message=FALSE}
+# Plot median ratings
+edx %>%
+  group_by(YearOfRating) %>%
+  summarize(median_rating = median(rating)) %>%
+  ggplot(aes(x = YearOfRating, y = median_rating)) +
+  geom_line()
+## We see the median rating shows lesser variation, thus mean will better account for variations
+```
+
+\subsubsection{YearOfRelease}
+```{r,message = FALSE}
+# Plot mean ratings
+edx %>%
+  group_by(YearOfRelease) %>%
+  summarize(mean_rating = mean(rating)) %>%
+  ggplot(aes(x = YearOfRelease, y = mean_rating)) +
+  geom_line()
+
+```
+
+We also plot count of movies, released in an year.
+
+```{r, message = FALSE}
+#Plot count of movies released in an year
+edx %>%
+  group_by(YearOfRelease) %>%
+  summarize(count = n()) %>%
+  ggplot(aes(x = YearOfRelease, y = count)) +
+  geom_bar(stat = "identity")
+
+```
+We see a good amount of variation when plotting mean_rating for years of movie release. The count of movies released also show significant difference for different years. This variable accounting for greater variation can justifiably be an important factor for our model development.
+
+```{r,include=FALSE, message=FALSE}
+# Plot median ratings
+edx %>%
+  group_by(YearOfRelease) %>%
+  summarize(median_rating = median(rating)) %>%
+  ggplot(aes(x = YearOfRelease, y = median_rating)) +
+  geom_line()
+# We see the median rating shows lesser variation, thus mean will better account for variations
+```
+
+
+\subsubsection{Unique values and observations of EDA}
+```{r}
+## Check unique values
+length(unique(edx$movieId))
+length(unique(edx$userId))
+length(unique(edx$YearOfRating))
+
+length(genre)
+length(unique(edx$YearOfRelease))
+
+```
+
+**Observations**
+
+The significance of a variable can be roughly determined by the variation it's graphs show. If the variation is less, then we can justifiably say that the variable in question is of less significance in the overall model, that is, the impact will be lesser.
+
+We see that unique movieIds and userIds are a lot more in number than other variables. Looking at the variation accounted in mean ratings graphs of the two, we can say that these will have a significant impact on our model.
+
+While that is the case for above two stated variables, the unique values present for other variables are considerably less. Though we see decent variation in the graphs of these variables, the impact of these variables will not be great due to lesser unique values. They will account for lesser variations as confirmed by the model results later.
+
+\subsection{Split Dataset for Finding Parameters}
+
+Once we are done with Data Cleaning and Preparation, we split the "edx" data further to get an intermediate dataset in 90/10 ratio. This is useful to obtain optimum values for certain parameters involved in our regularized model, Lambda value to be precise. We define our Loss function to be Root Mean Squared Error.
+
+```{r,warning=FALSE, message=FALSE}
+# Split dataset
+set.seed(1, sample.kind = "Rounding")
+test_index_cv <- createDataPartition(edx$rating, times = 1, p = 0.1, list = FALSE)
+
+train_set <- edx %>% slice(-test_index_cv)
+temp <- edx %>% slice(test_index_cv)
+
+# Make sure all movies and users in test set are present in train set
+test_set_cv <- temp %>%
+  semi_join(train_set, by = "movieId") %>%
+  semi_join(train_set, by = "userId")
+
+removed <- anti_join(temp, test_set_cv)
+train_set <- rbind(train_set, removed)
+
+# Define function for RMSE used in optimizing parameters
+RMSE <- function(true_ratings, predicted_ratings){
+  sqrt(mean((true_ratings - predicted_ratings)^2))
+}
+
+```
+
+\newpage
+\subsection{Data Modeling}
+
+We are now ready to build our model. 6 models are build each one accounting for additional variation due to a variable. 
+
+We first build this model using train_set and predict ratings of test_set_cv, defined in the previous section, repeating the process for different values of lambda corresponding to a combination of variables. The lambda which gives the lowest error (loss function) in this intermediate set is selected, and the corresponding RMSE noted.
+
+The chosen optimum value of lambda for the final model shall be used later to build model using entire "edx" set, recording the values of our loss function obtained after predicting ratings for validation set. Note that we don't use any parameter for our first model, one of the reasons we call it "Naive Model".
+
+\subsubsection{Naive Model}
+```{r}
+mu_hat <- mean(train_set$rating)
+naive_rmse <- RMSE(test_set_cv$rating, mu_hat) %>%
+  round(., digits = 5)
+```
+
+The Naive model only uses mean value to predict ratings. We see that the RMSE is very high for our first model developed on the intermediate test set named test_set_cv. We now record this RMSE with the method name in the results table as shown below. This table shall be updated as we proceed to our final model.
+
+```{r}
+#Create Results dataframe
+
+
+results <- data.frame(method = "Only Average", RMSE = naive_rmse)
+
+results %>%
+  knitr::kable()
+```
+
+
+
+
+```{r, message = FALSE, warning = FALSE, include=FALSE}
+# Free up space
+rm(edx1, movies_temp, removed, temp, test_index_cv, element, naive_rmse)
+```
+
+\newpage
+\subsubsection{Regularized Movie Effect}
+
+We now add Movie effect to our model.
+
+```{r, message = FALSE}
+# Set lambdas
+lambdas <- seq(0,10, 0.25)
+
+# find lambda using intermediate test set: lowest rmse
+rmses_i <- sapply(lambdas, function(l){
+  
+  # get b_i
+  b_i <- train_set %>%
+    select(movieId, rating) %>%
+    group_by(movieId) %>%
+    summarize(b_i = sum(rating - mu_hat)/(n()+l))
+  
+  # predict
+  predicted_ratings <- test_set_cv %>%
+    select(movieId) %>%
+    left_join(b_i, by = "movieId") %>%
+    mutate(predicted = mu_hat + b_i) %>%
+    pull(predicted)
+  
+  return(RMSE(test_set_cv$rating, predicted_ratings))
+})
+
+# Check lambda giving lowest rmse value
+lambda_i <- lambdas[which.min(rmses_i)]
+lambda_i
+```
+
+For every value of lambda going from 0 to 10, in steps of 0.25, we find the effect labeled b_i. This is added to mu_hat for our final prediction, and RMSE is calculated. We select the lambda which gives lowest RMSE. This is confirmed with the help of the following plot
+
+```{r}
+#Confirm with plot
+qplot(x = lambdas, y = rmses_i)
+
+
+```
+
+The RMSE corresponding to the chosen value of lambda is noted. 
+
+```{r, message = FALSE}
+# Update results dataframe
+
+results <- rbind(results, data.frame(method = "Regularized Movie Effect", 
+                                     RMSE = min(rmses_i)))
+
+results %>% knitr::kable()
+                    
+## We see that RMSE has reduced.  
+  
+```
+
+From the results table, we see that RMSE is reduced significantly. Thus, greater variation is accounted for. 
+
+Similarly, we perform this operation for other effects/biases. The results table is updated for every intermediate model. The final model incorporating all variable biases is thus obtained. 
+
+
+```{r, include = FALSE}
+## Free space
+rm(rmses_i,lambda_i)
+```
+
+
+```{r, include = FALSE, message = FALSE}
+#### Regularized Movie+User Effect ####
+
+# Initiate lambdas
+lambdas <- seq(0,10, 0.25)
+
+
+# find lambda using intermediate test set: lowest rmse
+
+rmses_i_u <- sapply(lambdas, function(l){
+  #get b_i
+  b_i <- train_set %>%
+    select(movieId, rating) %>%
+    group_by(movieId) %>%
+    summarize(b_i = sum(rating - mu_hat)/(n() + l))
+  
+  #get b_u
+  b_u <- train_set %>%
+    select(movieId, userId, rating) %>%
+    left_join(b_i, by = "movieId") %>%
+    group_by(userId) %>%
+    summarise(b_u = sum(rating - mu_hat - b_i)/(n() + l))
+  
+  
+  #predict
+  predicted_ratings <-  test_set_cv %>%
+    select(movieId, userId) %>%
+    left_join(b_i, by = "movieId") %>%
+    left_join(b_u, by = "userId") %>%
+    mutate(pred = mu_hat + b_i + b_u) %>%
+    pull(pred)
+  
+  return(RMSE(test_set_cv$rating, predicted_ratings))
+}) 
+
+#check lambda giving lowest rmse
+lambda_i_u <- lambdas[which.min(rmses_i_u)]
+lambda_i_u
+```
+
+
+```{r, include = FALSE}
+#Confirm with plot
+qplot(x = lambdas, y = rmses_i_u)
+```
+
+
+```{r, include=FALSE, message = FALSE}
+#Update results
+  
+results <- results %>%
+  rbind(data.frame(method = "Regularized Movie+User Effect", RMSE = min(rmses_i_u)))
+
+results
+
+# We see the RMSE reduced further
+```
+
+
+```{r, include = FALSE}
+## Free up space
+rm(lambda_i_u, lambdas, rmses_i_u)
+
+```
+
+
+
+
+```{r, include = FALSE}
+#### Regularized Movie+User+YearOfRating Effect ####
+memory.limit(size = 10000)
+
+gc()
+```
+
+
+
+```{r, include = FALSE, message = FALSE, warning=FALSE}
+# initiate lambdas
+lambdas <- seq(0, 10, 0.25)
+
+# find lambda using intermediate test set: lowest rmse
+
+rmses_i_u_yrate <- sapply(lambdas, function(l){
+  
+  #get b_i
+  b_i <- train_set %>%
+    select(movieId, rating) %>%
+    group_by(movieId) %>%
+    summarise(b_i = sum(rating - mu_hat)/(n() + l)) %>%
+    round(., digits = 5)
+  
+  #get b_u
+  b_u <- train_set %>%
+    select(movieId, userId, rating) %>%
+    left_join(b_i, by = "movieId") %>%
+    select(-movieId) %>%
+    group_by(userId) %>%
+    summarise(b_u = sum(rating - mu_hat - b_i)/(n() + l)) %>%
+    round(., digits = 5)
+  
+  #get b_yrate
+  b_yrate <- train_set %>%
+    select(movieId, userId, rating, YearOfRating) %>%
+    left_join(b_i, by = "movieId") %>%
+    select(-movieId) %>%
+    left_join(b_u, by = "userId") %>%
+    select(-userId) %>%
+    group_by(YearOfRating) %>%
+    summarise(b_yrate = sum(rating - mu_hat - b_i - b_u)/(n() + l)) %>%
+    round(., digits = 5)
+  
+  #get predicted ratings
+  predicted_ratings <- test_set_cv %>%
+    select(movieId, userId, YearOfRating) %>%
+    left_join(b_i, by = "movieId") %>%
+    select(-movieId) %>%
+    left_join(b_u, by = "userId") %>%
+    select(-userId) %>%
+    left_join(b_yrate, by = "YearOfRating") %>%
+    select(-YearOfRating) %>%
+    mutate(pred = mu_hat + b_i + b_u + b_yrate) %>%
+    round(., digits = 5) %>%
+    pull(pred)
+  
+  #return RMSE
+  return(RMSE(test_set_cv$rating, predicted_ratings))
+  
+})
+
+
+#Check lambda giving lowest rmse
+lambda_i_u_yrate <- lambdas[which.min(rmses_i_u_yrate)]
+lambda_i_u_yrate
+```
+
+
+
+```{r, include = FALSE}
+# Confirm with plot
+qplot(x = lambdas, y = rmses_i_u_yrate)
+```
+
+
+```{r, include = FALSE, message = FALSE}
+#Update results
+
+results <- results %>%
+  rbind(data.frame(method = "Regularized Movie+User+YearOfRating Effect", 
+                   RMSE = min(rmses_i_u_yrate)))
+
+results 
+
+# We see the RMSE reduced further, although the reduction is lesser compared to earlier changes
+
+```
+
+
+
+```{r, include = FALSE}
+
+## Free up space
+rm(lambdas, lambda_i_u_yrate, rmses_i_u_yrate)
+```
+
+
+
+
+
+```{r, include = FALSE}
+#### Regularized Movie+User+YearOfRating+YearOfRelease Effect ####
+memory.limit(size = 12000)
+
+gc()
+```
+
+
+
+
+```{r, include = FALSE, message = FALSE}
+# initiate lambdas
+lambdas <- seq(0, 10, 0.25)
+
+# find lambda using intermediate test set: lowest rmse
+
+rmses_i_u_yrate_yrel <- sapply(lambdas, function(l){
+  
+  #get b_i
+  b_i <- train_set %>%
+    select(movieId, rating) %>%
+    group_by(movieId) %>%
+    summarise(b_i = sum(rating - mu_hat)/(n() + l)) %>%
+    round(., digits = 5)
+  
+  #get b_u
+  b_u <- train_set %>%
+    select(movieId, userId, rating) %>%
+    left_join(b_i, by = "movieId") %>%
+    select(-movieId) %>%
+    group_by(userId) %>%
+    summarise(b_u = sum(rating - mu_hat - b_i)/(n() + l)) %>%
+    round(., digits = 5)
+  
+  #get b_yr
+  b_yrate <- train_set %>%
+    select(movieId, userId, rating, YearOfRating) %>%
+    left_join(b_i, by = "movieId") %>%
+    select(-movieId) %>%
+    left_join(b_u, by = "userId") %>%
+    select(-userId) %>%
+    group_by(YearOfRating) %>%
+    summarise(b_yrate = sum(rating - mu_hat - b_i - b_u)/(n() + l)) %>%
+    round(., digits = 5)
+  
+  b_yrel <- train_set %>%
+    select(movieId, userId, rating, YearOfRating, YearOfRelease) %>%
+    left_join(b_i, by = "movieId") %>%
+    select(-movieId) %>%
+    left_join(b_u, by = "userId") %>%
+    select(-userId) %>%
+    left_join(b_yrate, by = "YearOfRating") %>%
+    select(-YearOfRating) %>%
+    group_by(YearOfRelease) %>%
+    summarize(b_yrel = sum(rating - mu_hat - b_i - b_u - b_yrate)/(n() + l)) %>%
+    round(., digits = 5)
+  
+  #get predicted ratings
+  predicted_ratings <- test_set_cv %>%
+    select(movieId, userId, YearOfRating, YearOfRelease) %>%
+    left_join(b_i, by = "movieId") %>%
+    select(-movieId) %>%
+    left_join(b_u, by = "userId") %>%
+    select(-userId) %>%
+    left_join(b_yrate, by = "YearOfRating") %>%
+    select(-YearOfRating) %>%
+    left_join(b_yrel, by = "YearOfRelease") %>%
+    select(-YearOfRelease) %>%
+    mutate(pred = mu_hat + b_i + b_u + b_yrate + b_yrel) %>%
+    round(., digits = 5) %>%
+    pull(pred)
+  
+  #return RMSE
+  return(RMSE(test_set_cv$rating, predicted_ratings))
+  
+})
+
+
+#Check lambda giving lowest rmse
+lambda_i_u_yrate_yrel <- lambdas[which.min(rmses_i_u_yrate_yrel)]
+lambda_i_u_yrate_yrel
+```
+
+
+
+```{r, include=FALSE}
+#Confirm with plot
+qplot(x = lambdas, y = rmses_i_u_yrate_yrel)
+```
+
+
+
+```{r, include = FALSE, message=FALSE}
+#Update results
+  
+results <- results %>%
+  rbind(data.frame(method = "Regularized Movie+User+YearOfRating+YearOfRelease Effect", 
+                   RMSE =min(rmses_i_u_yrate_yrel)))
+
+results
+
+# We see the RMSE reduced further significantly compared to YearOfRating effect addition
+```
+
+
+```{r, include=FALSE}
+## Free up space
+rm(b_i, b_u, b_yrate, b_yrel, lambda_i_u_yrate_yrel, lambdas, mu, rmses_i_u_yrate_yrel, movie_user_YearOfRating_YearOfRelease_effect)
+
+```
+
+\subsubsection{Regularized Movie+User+YearOfRating+YearOfRelease+Genre Effect}
+```{r, include=FALSE}
+# Check count of genres
+genre <- colnames(edx)[7:length(colnames(edx))]
+genre
+
+
+b <- list()
+for (i in 1:length(genre)){
+  b[[i]] <- c(sum(edx[[genre[i]]]), (length(edx[[genre[i]]]) - sum(edx[[genre[i]]])))
+  names(b[[i]]) <- c(1,0)
+}
+
+names(b) <- genre
+b
+
+```
+
+```{r, include=FALSE}
+# Free up space
+rm(b)
+
+memory.limit(size = 13000)
+
+gc()
+```
+
+
+```{r, warning=FALSE, message = FALSE}
+
+# Initiate lambdas
+lambdas <- seq(1,10, 2) 
+#we know that optimum lambda will be around 5, 
+# so we use bigger steps to process faster. 
+# Also, we check our final result with the graph to confirm
+
+# find lambda using intermediate test set: lowest rmse
+
+rmses_i_u_yrate_yrel_g <- sapply(lambdas, function(l){
+
+  b_g <- list()
+  b_g_x <- vector(mode = "character")
+  
+  
+  #get b_i
+  b_i <- train_set %>%
+    select(movieId, rating) %>%
+    group_by(movieId) %>%
+    summarise(b_i = sum(rating - mu_hat)/(n() + l)) %>%
+    round(., digits = 5)
+  
+  #get b_u
+  b_u <- train_set %>%
+    select(movieId, userId, rating) %>%
+    left_join(b_i, by = "movieId") %>%
+    select(-movieId) %>%
+    group_by(userId) %>%
+    summarise(b_u = sum(rating - mu_hat - b_i)/(n() + l)) %>%
+    round(., digits = 5)
+  
+  #get b_yr
+  b_yrate <- train_set %>%
+    select(movieId, userId, rating, YearOfRating) %>%
+    left_join(b_i, by = "movieId") %>%
+    select(-movieId) %>%
+    left_join(b_u, by = "userId") %>%
+    select(-userId) %>%
+    group_by(YearOfRating) %>%
+    summarise(b_yrate = sum(rating - mu_hat - b_i - b_u)/(n() + l)) %>%
+    round(., digits = 5)
+  
+  b_yrel <- train_set %>%
+    select(movieId, userId, rating, YearOfRating, YearOfRelease) %>%
+    left_join(b_i, by = "movieId") %>%
+    select(-movieId) %>%
+    left_join(b_u, by = "userId") %>%
+    select(-userId) %>%
+    left_join(b_yrate, by = "YearOfRating") %>%
+    select(-YearOfRating) %>%
+    group_by(YearOfRelease) %>%
+    summarize(b_yrel = sum(rating - mu_hat - b_i - b_u - b_yrate)/(n() + l)) %>%
+    round(., digits = 5)
+  
+  for (i in 1:length(genre)){
+  b_g_x[i] <- paste("b_g", i, sep = "_")
+  
+  df_temp <- train_set %>%
+    select(movieId, userId, YearOfRating, YearOfRelease, rating, genre[i]) %>%
+    left_join(b_i, by = "movieId") %>%
+    select(-movieId) %>%
+    left_join(b_u, by = "userId") %>%
+    select(-userId) %>%
+    left_join(b_yrate, by = "YearOfRating") %>%
+    select(-YearOfRating) %>%
+    left_join(b_yrel, by = "YearOfRelease") %>%
+    select(-YearOfRelease) %>%
+    mutate(b_g_effect = 0)
+  
+  k <- i
+  
+  while(k != 1){
+    df_temp <- df_temp %>%
+      cbind(., select(train_set, genre[k-1])) %>%
+      left_join(b_g[[k-1]], by = genre[k-1]) %>%
+      select(-genre[k-1]) %>%
+      mutate_at(vars(b_g_x[k-1]), ~replace(., is.na(.), 0)) %>%
+      mutate(b_g_effect = b_g_effect + (!!as.name(b_g_x[k-1]))) %>%
+      select(-b_g_x[k-1]) %>%
+      round(., digits = 5)
+    k <- k-1
+  }
+  
+  if(i != 1){
+  b_g[[i]] <- df_temp %>%
+    group_by_(genre[i]) %>%
+    summarise(!!b_g_x[i] := sum(rating - mu_hat - b_i - b_u -
+                                  b_yrate - b_yrel - b_g_effect)/(n() + l)) %>%
+    filter((!!as.name(genre[i])) == 1) %>%
+    round(., digits = 5)
+  } else {
+    b_g[[i]] <- df_temp %>%
+      group_by_(genre[i]) %>%
+      summarise(!!b_g_x[i] := sum(rating - mu_hat - b_i - b_u
+                                  - b_yrate - b_yrel)/(n()+ l)) %>%
+      filter((!!as.name(genre[i])) == 1) %>%
+      round(., digits = 5)
+  }
+  }
+  
+  rm(df_temp)
+  
+  df_temp_test <- test_set_cv %>%
+    select(movieId, userId, YearOfRating, YearOfRelease, rating) %>%
+    left_join(b_i, by = "movieId") %>%
+    select(-movieId) %>%
+    left_join(b_u, by = "userId") %>%
+    select(-userId) %>%
+    left_join(b_yrate, by = "YearOfRating") %>%
+    select(-YearOfRating) %>%
+    left_join(b_yrel, by = "YearOfRelease") %>%
+    select(-YearOfRelease) %>%
+    mutate(b_g = 0)
+  
+  for(i in 1: length(genre)){
+    df_temp_test <- df_temp_test %>%
+      cbind(., select(test_set_cv, genre[i])) %>%
+      left_join(b_g[[i]], by = genre[i]) %>%
+      select(-genre[i]) %>%
+      mutate_at(vars(b_g_x[i]), ~replace(., is.na(.), 0)) %>%
+      mutate(b_g = b_g + (!!as.name(b_g_x[i]))) %>%
+      round(.,digits = 5) %>%
+      select(-b_g_x[i])
+  }
+  
+  predicted_ratings <- df_temp_test %>%
+    mutate(pred = mu_hat + b_i + b_u + b_yrate + b_yrel + b_g) %>%
+    round(.,digits = 5) %>%
+    pull(pred)
+  
+
+  
+
+return(RMSE(test_set_cv$rating, predicted_ratings))
+})
+
+
+#check lambda which gives lowest rmse
+lambda_i_u_yrate_yrel_g <- lambdas[which.min(rmses_i_u_yrate_yrel_g)]
+lambda_i_u_yrate_yrel_g
+```
+
+
+Note, that for our final model, we use bigger steps for lambda, taking only odd numbers from 1 to 10.
+Repeating the exercise of adding effects, we see the value for lambda giving lowest RMSE converges towards 5 after a few models. We thus lower the values of lambda to test, for better computational speed. The best value of lambda is further confirmed with the following plot, showing the chosen value to be justifiably suitable.
+
+```{r}
+#Confirm with plot
+qplot(x = lambdas, y = rmses_i_u_yrate_yrel_g)
+
+```
+
+```{r}
+#Update results
+
+
+results <- results %>%
+  rbind(data.frame(method = 
+                     "Regularized Movie+User+YearOfRating+YearOfRelease+Genre Effect", 
+                   RMSE = min(rmses_i_u_yrate_yrel_g)))
+
+results %>%
+  knitr::kable()
+```
+
+
+From the above table, it is confirmed that the RMSE value for the 6th entry, accounting for effects due to variables viz. movieId, userId, YearOfRating, YearOfRelease and different genres, is the least. We thus utilize the lambda found and train our final model.
+
+The "edx" set is used for training and results are obtained on the "validation" set. 
+
+```{r, message = FALSE, warning=FALSE}
+#Predict for validation set
+rm(rmses_i_u_yrate_yrel_g, train_set, test_set_cv)
+
+mu <- mean(edx$rating)
+
+b_i <- edx %>%
+  select(movieId, rating) %>%
+  group_by(movieId) %>%
+  summarize(b_i = sum(rating - mu)/
+              (n() + lambda_i_u_yrate_yrel_g)) %>%
+  round(., digits = 5)
+
+b_u <- edx %>%
+  select(movieId, userId, rating) %>%
+  left_join(b_i, by = "movieId") %>%
+  select(-movieId) %>%
+  group_by(userId) %>%
+  summarize(b_u = sum(rating - mu - b_i)/
+              (n() + lambda_i_u_yrate_yrel_g)) %>%
+  round(., digits = 5)
+
+b_yrate <- edx %>%
+  select(movieId, userId, YearOfRating, rating) %>%
+  left_join(b_i, by = "movieId") %>%
+  select(-movieId) %>%
+  left_join(b_u, by = "userId") %>%
+  select(-userId) %>%
+  group_by(YearOfRating) %>%
+  summarize(b_yrate = sum(rating - mu - b_i - b_u)/
+              (n() + lambda_i_u_yrate_yrel_g)) %>%
+  round(., digits = 5)
+
+b_yrel <- edx %>%
+  select(movieId, userId, YearOfRating, YearOfRelease, rating) %>%
+  left_join(b_i, by = "movieId") %>%
+  select(-movieId) %>%
+  left_join(b_u, by = "userId") %>%
+  select(-userId) %>%
+  left_join(b_yrate, by = "YearOfRating") %>%
+  select(-YearOfRating) %>%
+  group_by(YearOfRelease) %>%
+  summarize(b_yrel = sum(rating - mu - b_i - b_u - b_yrate)/
+              (n() + lambda_i_u_yrate_yrel_g)) %>%
+  round(., digits = 5)
+
+b_g <- list()
+b_g_x <- vector(mode = "character")
+
+
+for (i in 1:length(genre)){
+  b_g_x[i] <- paste("b_g", i, sep = "_")
+  
+  df_temp <- edx %>%
+    select(movieId, userId, YearOfRating, YearOfRelease, rating, genre[i]) %>%
+    left_join(b_i, by = "movieId") %>%
+    select(-movieId) %>%
+    left_join(b_u, by = "userId") %>%
+    select(-userId) %>%
+    left_join(b_yrate, by = "YearOfRating") %>%
+    select(-YearOfRating) %>%
+    left_join(b_yrel, by = "YearOfRelease") %>%
+    select(-YearOfRelease) %>%
+    mutate(b_g_effect = 0)
+  
+  k <- i
+  
+  while(k != 1){
+    df_temp <- df_temp %>%
+      cbind(., select(edx, genre[k-1])) %>%
+      left_join(b_g[[k-1]], by = genre[k-1]) %>%
+      select(-genre[k-1]) %>%
+      mutate_at(vars(b_g_x[k-1]), ~replace(., is.na(.), 0)) %>%
+      mutate(b_g_effect = b_g_effect + (!!as.name(b_g_x[k-1]))) %>%
+      select(-b_g_x[k-1]) %>%
+      round(., digits = 5)
+    k <- k-1
+  }
+  
+  if(i != 1){
+  b_g[[i]] <- df_temp %>%
+    group_by_(genre[i]) %>%
+    summarise(!!b_g_x[i] := 
+                sum(rating - mu - b_i - b_u - 
+                      b_yrate - b_yrel - b_g_effect)/
+                (n() + lambda_i_u_yrate_yrel_g)) %>%
+    filter((!!as.name(genre[i])) == 1) %>%
+    round(., digits = 5)
+  } else {
+    b_g[[i]] <- df_temp %>%
+      group_by_(genre[i]) %>%
+      summarise(!!b_g_x[i] := 
+                  sum(rating - mu - b_i - b_u - b_yrate - b_yrel)/
+                  (n()+ lambda_i_u_yrate_yrel_g)) %>%
+      filter((!!as.name(genre[i])) == 1) %>%
+      round(., digits = 5)
+  }
+  }
+  
+
+
+ df_temp_val <- validation %>%
+   select(movieId, userId, YearOfRating, YearOfRelease, rating) %>%
+   left_join(b_i, by = "movieId") %>%
+   select(-movieId) %>%
+   left_join(b_u, by = "userId") %>%
+   select(-userId) %>%
+   left_join(b_yrate, by = "YearOfRating") %>%
+   select(-YearOfRating) %>%
+   left_join(b_yrel, by = "YearOfRelease") %>%
+   select(-YearOfRelease) %>%
+   mutate(b_g = 0)
+  
+  for(i in 1: length(genre)){
+    df_temp_val <- df_temp_val %>%
+      cbind(., select(validation, genre[i])) %>%
+      left_join(b_g[[i]], by = genre[i]) %>%
+      select(-genre[i]) %>%
+      mutate_at(vars(b_g_x[i]), ~replace(., is.na(.), 0)) %>%
+      mutate(b_g = b_g + (!!as.name(b_g_x[i]))) %>%
+      round(.,digits  = 5) %>%
+      select(-b_g_x[i])
+  }
+  
+  movie_user_YearOfRating_YearOfRelease_genre_effect <- df_temp_val %>%
+    mutate(pred = mu + b_i + b_u + b_yrate + b_yrel + b_g) %>%
+    pull(pred)
+  
+results_final <- data.frame(method = 
+                     "Regularized Movie+User+YearOfRating+YearOfRelease+Genre Effect", 
+                   RMSE = RMSE(validation$rating, 
+                               movie_user_YearOfRating_YearOfRelease_genre_effect))
+```
+
+
+```{r, message = FALSE, warning=FALSE}
+## the final RMSE is as follows
+results_final %>%
+  knitr::kable()
+
+```
+
+We thus obtain a desired RMSE value (below 0.86490).
+
+```{r, include=FALSE}
+## Free up space
+rm(b_i, b_u, b_g, b_g_x, b_yrate, b_yrel, df_temp, df_temp_val, i, k, lambda_i_u_yrate_yrel_g, lambdas, mu, movie_user_YearOfRating_YearOfRelease_genre_effect)
+
+```
+
+
+
+\newpage
+\section{Result}
+
+Observing the Loss Function values in the "results" table, we see that the best model is when all the variables, that is, movieId, userId, year of movie rating, year of movie release and genre are included. 
+
+
+```{r}
+#Results obtained through intermediate sets
+results %>% knitr::kable()
+```
+For comparison purpose, we check the RMSE that the first model gives using "edx" and "validation" set.
+
+
+
+```{r}
+#Results obtained using "edx" and "validation" sets
+
+mu <- mean(edx$rating)
+
+results_final <- results_final %>%
+  rbind(data.frame(method = "Only average",
+                   RMSE = RMSE(validation$rating, mu)))
+
+results_final %>%
+  arrange(desc(RMSE)) %>%
+  knitr::kable()
+```
+
+A substantial reduction in RMSE, from 1.06120 to 0.86434 , when using "edx" and "validation" sets is observed (results_final table). The desired RMSE value is also obtained.
+
+Looking at the "results" table, we observe that the reduction is more when effects for variables movieId, userId and year of movie release are accounted for. This tells us that these account for the maximum variation among all other variables we employed.
+
+We have thus found the optimal value for parameter lambda as 5 and successfully built a decent recommendation system using a regularized model.
+
+\newpage
+\section{Conclusion}
+
+The regularized model utilized shows great promise, with RMSE 0.86434 (utilizing effects due to all variables), well below the 0.86490 desired.
+
+The significant reduction from Naive Model obtained is nevertheless subject to few factors that are observed in the analysis
+
+In particular, the decrease in RMSE is different for different variables. Major reduction can only be seen if the said variable account for greater variation. This can be found to be dependent on unique values present for a variable in our regularized model. MovieId, userId and year of movie release have the most unique values present, and thus lead to the greatest reduction in loss function compared to other variables, as seen in the "results" table, modeled using intermediate "train" and "test" sets (and can be verified to follow the same pattern when using "edx" and "validation" sets to model)
+
+This observation brings us to an important limitation of our model. While we used all the variables available to us for getting final RMSE, the computation time and memory usage has been ignored for the same. An efficient model taking into account these elements will be more beneficial in practical use.
+
+The future models can thus be built with greater focus to variable importance. Some Machine Learning techniques like Random Forest are known to generate Feature Importance and similar techniques can thus be employed, provided the RMSE is close to, if not greater than, that obtained in our regularized model.
+
+The given recommendation systems utilizing all information of the dataset is therefore an able model, providing further scope and insights to build on for practical application.
+
+
+
